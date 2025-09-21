@@ -1,0 +1,471 @@
+
+{
+  "app": {
+    "title": {
+      "full": "Business Hub Pro",
+      "short": "Business Hub"
+    }
+  },
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "customers": "Customers",
+    "suppliers": "Suppliers",
+    "agenda": "Agenda",
+    "reports": "Reports",
+    "settings": "Settings",
+    "help": "Help"
+  },
+  "header": {
+    "searchPlaceholder": "Search...",
+    "changeToDarkMode": "Switch to dark mode",
+    "changeToLightMode": "Switch to light mode",
+    "appointmentsForToday": "Appointments for Today",
+    "noAppointmentsToday": "No upcoming appointments for today.",
+    "logout": "Logout",
+    "searchResults": {
+      "customers": "Customers",
+      "suppliers": "Suppliers",
+      "appointments": "Appointments",
+      "noResults": "No results found."
+    }
+  },
+  "login": {
+    "welcome": "Welcome back! Access your account.",
+    "emailLabel": "Email",
+    "emailPlaceholder": "your@email.com",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "••••••",
+    "rememberMe": "Remember me",
+    "forgotPassword": "Forgot your password?",
+    "signIn": "Sign In",
+    "signingIn": "Signing In...",
+    "continueWith": "Or continue with",
+    "errors": {
+      "invalidCredentials": "Invalid email or password. Test accounts: (Super Admin) ddarruspe@gmail.com / 1906 | (User) alice@businesshub.com / password"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "cards": {
+      "activeCustomers": "Active Customers",
+      "totalSuppliers": "Total Suppliers",
+      "upcomingAppointments": "Upcoming Appointments"
+    },
+    "charts": {
+      "customerInteractionsTitle": "Customer Interactions (Last 6 months)",
+      "interactions": "Interactions"
+    },
+    "upcomingAppointments": {
+      "title": "Next 5 Appointments",
+      "none": "No upcoming appointments."
+    },
+    "calendar": {
+      "title": "Monthly Calendar",
+      "viewAppointmentsFor": "View appointments for {{date}}",
+      "weekdays": ["S", "M", "T", "W", "T", "F", "S"]
+    },
+    "recentActivity": {
+      "title": "Recent Activity",
+      "summary": "A summary of recent activity will be displayed here."
+    }
+  },
+  "customers": {
+    "title": "Customers",
+    "searchPlaceholder": "Search by customer name...",
+    "add": "Add Customer",
+    "edit": "Edit Customer",
+    "addNew": "Add New Customer",
+    "name": "Name",
+    "contact": "Contact",
+    "status": "Status",
+    "customerSince": "Customer Since",
+    "actions": "Actions",
+    "noCustomersFound": "No customers found.",
+    "statusActive": "Active",
+    "statusInactive": "Inactive",
+    "typePerson": "Individual",
+    "typeCompany": "Company",
+    "details": "Details of {{name}}",
+    "confirmDelete": {
+      "title": "Confirm Deletion",
+      "header": "Delete Customer",
+      "body": "Are you sure you want to delete <strong>{{name}}</strong>? This action is permanent and cannot be undone."
+    },
+    "deleteBlocked": {
+      "title": "Deletion Blocked",
+      "body": "This customer cannot be deleted. They are associated with {{count}} appointment(s). Please remove them from the appointments before deleting."
+    },
+    "analysis": {
+      "title": "Interaction Analysis for {{name}}",
+      "button": "Analyze with AI"
+    },
+    "form": {
+      "fullName": "Full Name",
+      "companyName": "Company Name",
+      "email": "Email",
+      "type": "Type",
+      "cnpj": "CNPJ",
+      "cpf": "CPF",
+      "phone": "Phone",
+      "cep": "Postal Code",
+      "address": "Address",
+      "status": "Status",
+      "companyLogo": "Company Logo",
+      "uploadLogo": "Upload Logo",
+      "logoHint": "If no logo is uploaded, the company's initials will be used.",
+      "avatar": "Avatar",
+      "changeAvatar": "Change Avatar",
+      "errors": {
+        "invalidCpf": "Invalid CPF. Please check the entered number.",
+        "invalidCnpj": "Invalid CNPJ. Please check the entered number."
+      }
+    },
+    "detailsView": {
+      "tabs": {
+        "details": "Details",
+        "interactions": "Interactions"
+      },
+      "nameLabel": "Name:",
+      "emailLabel": "Email:",
+      "phoneLabel": "Phone:",
+      "typeLabel": "Type:",
+      "cnpjLabel": "CNPJ:",
+      "cpfLabel": "CPF:",
+      "statusLabel": "Status:",
+      "sinceLabel": "Customer Since:",
+      "cepLabel": "Postal Code:",
+      "addressLabel": "Address:",
+      "addInteraction": {
+        "title": "Log New Interaction",
+        "placeholder": "Describe the interaction here...",
+        "typeLabel": "Type:",
+        "types": {
+          "call": "Call",
+          "email": "Email",
+          "meeting": "Meeting",
+          "note": "Note"
+        }
+      },
+      "noInteractions": "No interactions logged."
+    }
+  },
+  "suppliers": {
+    "title": "Suppliers",
+    "searchPlaceholder": "Search by company name or contact...",
+    "add": "Add Supplier",
+    "edit": "Edit Supplier",
+    "addNew": "Add New Supplier",
+    "companyName": "Company Name",
+    "contact": "Contact",
+    "services": "Services",
+    "actions": "Actions",
+    "noSuppliersFound": "No suppliers found.",
+    "viewDetails": "View Details",
+    "detailsOf": "Details of {{name}}",
+    "confirmDelete": {
+      "title": "Confirm Deletion",
+      "header": "Delete Supplier",
+      "body": "Are you sure you want to delete <strong>{{name}}</strong>? This action is permanent and cannot be undone."
+    },
+    "deleteBlocked": {
+      "title": "Deletion Blocked",
+      "body": "This supplier cannot be deleted. They are associated with {{count}} appointment(s). Please remove the association before deleting."
+    },
+    "form": {
+      "companyData": "Company Data",
+      "companyLogo": "Company Logo",
+      "uploadLogo": "Upload Logo",
+      "logoHint": "If no logo is uploaded, the initials will be used.",
+      "companyName": "Company Name",
+      "cnpj": "CNPJ",
+      "contactPerson": "Contact Person",
+      "contactAvatar": "Contact Avatar",
+      "changeAvatar": "Change Avatar",
+      "fullName": "Full Name",
+      "email": "Email",
+      "phone": "Phone",
+      "services": "Services (comma separated)"
+    }
+  },
+  "agenda": {
+    "title": "Agenda",
+    "add": "New Appointment",
+    "edit": "Edit Appointment",
+    "allAppointments": "All Appointments",
+    "views": {
+      "board": "Board",
+      "list": "List",
+      "month": "Month",
+      "week": "Week",
+      "day": "Day"
+    },
+    "searchPlaceholder": "Search by title...",
+    "filter": {
+      "allCustomers": "All Customers",
+      "allSuppliers": "All Suppliers"
+    },
+    "board": {
+      "overdue": "To Do (Overdue)",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "next7Days": "Next 7 Days",
+      "future": "Future",
+      "completed": "Completed",
+      "viewAll": "View All ({{count}})"
+    },
+    "noScheduledAppointments": "No scheduled appointments found for the selected filters.",
+    "details": {
+      "title": "Details",
+      "history": "History",
+      "noDescription": "No description provided.",
+      "dateTime": "Date and Time:",
+      "location": "Location:",
+      "notSpecified": "Not specified",
+      "dueDate": "Due Date:",
+      "participants": "Participants:",
+      "attachments": "Attachments:",
+      "reopen": "Reopen",
+      "aiSummary": "AI Summary",
+      "edit": "Edit"
+    },
+    "form": {
+      "generalInfo": "General Information",
+      "title": "Title",
+      "description": "Description",
+      "dateAndTime": "Date and Time",
+      "start": "Start",
+      "end": "End",
+      "dueDate": "Due Date (Optional)",
+      "repeat": "Repeat appointment",
+      "frequency": "Frequency",
+      "repeatUntil": "Repeat until",
+      "frequencies": {
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "monthly": "Monthly",
+        "yearly": "Annually"
+      },
+      "detailsAndAssociations": "Details & Associations",
+      "location": "Location",
+      "category": "Category",
+      "reminder": "Reminder",
+      "reminders": {
+        "none": "None",
+        "5": "5 minutes before",
+        "15": "15 minutes before",
+        "30": "30 minutes before",
+        "60": "1 hour before",
+        "1440": "1 day before"
+      },
+      "relatedCustomer": "Related Customer",
+      "noCustomer": "None",
+      "relatedSupplier": "Related Supplier",
+      "noSupplier": "None",
+      "participantsAndAttachments": "Participants & Attachments",
+      "teamParticipants": "Team Participants",
+      "searchTeam": "Search team...",
+      "attachments": "Attachments",
+      "addFiles": "Add Files",
+      "notify": "Notify participants by email",
+      "errors": {
+        "general": "Please fill in the title, start, and end dates.",
+        "invalidDate": "The start or end date/time is invalid.",
+        "endBeforeStart": "End date must be after start date.",
+        "dueAfterStart": "Due date must be after start date.",
+        "recurrenceEnd": "Please set an end date for the recurrence."
+      }
+    },
+    "completed": {
+      "title": "Completed Appointments History",
+      "searchPlaceholder": "Search by title...",
+      "completedOn": "Completed on: {{date}}",
+      "noCompleted": "No completed appointments found."
+    },
+    "summary": {
+      "title": "Summary of {{title}}"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": {
+      "myCompany": "My Company",
+      "users": "Users",
+      "categories": "Categories",
+      "companies": "Companies",
+      "permissions": "Permissions",
+      "systemCustomization": "Customization"
+    },
+    "customization": {
+      "title": "System Customization",
+      "logoTitle": "System Logo (Login Screen)",
+      "logoDescription": "This logo will appear on the login screen for all users.",
+      "changeLogo": "Change Logo",
+      "removeLogo": "Remove Logo"
+    },
+    "company": {
+      "title": "Company Information",
+      "name": "Company Name",
+      "cnpj": "CNPJ",
+      "address": "Address",
+      "contactEmail": "Contact Email",
+      "phone": "Phone"
+    },
+    "users": {
+      "title": "User Management",
+      "add": "Add User",
+      "edit": "Edit User",
+      "table": {
+        "name": "Name",
+        "role": "Role",
+        "company": "Company",
+        "actions": "Actions"
+      },
+      "form": {
+        "fullName": "Full Name",
+        "email": "Email",
+        "role": "Role",
+        "company": "Company",
+        "selectCompany": "Select a company",
+        "roles": {
+          "admin": "Administrator",
+          "manager": "Manager",
+          "collaborator": "Collaborator"
+        }
+      }
+    },
+    "companies": {
+      "title": "Company Management",
+      "add": "Add Company",
+      "edit": "Edit Company",
+      "table": {
+        "name": "Company Name",
+        "cnpj": "CNPJ",
+        "actions": "Actions"
+      },
+      "deleteWarning": "The main company 'Business Hub Pro Inc.' cannot be removed for security reasons.",
+      "confirmDelete": "Are you sure you want to delete the company \"{{name}}\"? All associated data will be removed."
+    },
+    "categories": {
+      "title": "Appointment Categories",
+      "new": "New Category",
+      "deleteWarning": "There must be at least one category.",
+      "confirmDelete": "Are you sure you want to remove the category \"{{name}}\"?.",
+      "errors": {
+        "emptyName": "Category name cannot be empty.",
+        "duplicateName": "The category name \"{{name}}\" is duplicated."
+      }
+    },
+    "permissions": {
+      "title": "Detailed User Permissions",
+      "selectUser": "Select a User",
+      "editingFor": "Editing permissions for: {{name}}",
+      "selectUserPrompt": "Select a user to view and edit their permissions.",
+      "groups": {
+        "dashboard": "Dashboard",
+        "customers": "Customers",
+        "suppliers": "Suppliers",
+        "agenda": "Agenda",
+        "reports": "Reports",
+        "settings": "Settings",
+        "superAdmin": "Super Administration"
+      },
+      "descriptions": {
+        "VIEW_DASHBOARD": "View dashboard",
+        "VIEW_CUSTOMERS": "View customers",
+        "MANAGE_CUSTOMERS": "Add/Edit customers",
+        "DELETE_CUSTOMERS": "Delete customers",
+        "VIEW_SUPPLIERS": "View suppliers",
+        "MANAGE_SUPPLIERS": "Add/Edit suppliers",
+        "DELETE_SUPPLIERS": "Delete suppliers",
+        "VIEW_AGENDA": "View agenda",
+        "MANAGE_AGENDA": "Manage agenda (create/edit events)",
+        "VIEW_REPORTS": "View reports",
+        "VIEW_SETTINGS": "Access settings",
+        "MANAGE_COMPANY_INFO": "Edit own company info",
+        "MANAGE_USERS": "Manage users in own company",
+        "MANAGE_CATEGORIES": "Manage appointment categories",
+        "MANAGE_ALL_USERS": "Manage users from ANY company"
+      }
+    }
+  },
+  "help": {
+    "title": "Help Center",
+    "intro": "Welcome! Here you will find guides on how to use the Business Hub features.",
+    "downloadManual": "Download PDF Manual"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "saveChanges": "Save Changes",
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "close": "Close",
+    "ok": "OK",
+    "actions": "Actions",
+    "today": "Today"
+  },
+  "notifications": {
+    "companyUpdated": "Company information updated successfully!",
+    "userUpdated": "User updated successfully!",
+    "userAdded": "User added successfully!",
+    "companyAdded": "Company added successfully!",
+    "companyRemoved": "Company removed successfully!",
+    "categoriesSaved": "Categories saved successfully!",
+    "permissionsSaved": "Permissions saved successfully!",
+    "customerUpdated": "Customer updated successfully!",
+    "customerAdded": "Customer added successfully!",
+    "customerRemoved": "Customer removed successfully!",
+    "supplierUpdated": "Supplier updated successfully!",
+    "supplierAdded": "Supplier added successfully!",
+    "supplierRemoved": "Supplier removed successfully!",
+    "appointmentUpdated": "Appointment updated successfully!",
+    "appointmentAdded": "Appointment scheduled successfully!",
+    "notificationsSent": "Update notifications sent by email.",
+    "appointmentReopened": "Appointment reopened successfully!",
+    "systemLogoUpdated": "System logo updated successfully!",
+    "systemLogoRemoved": "System logo removed."
+  },
+  "appointment": {
+    "category": {
+      "CLIENT_MEETING": "Client Meeting",
+      "INTERNAL_TEAM": "Internal Team",
+      "SUPPLIER": "Supplier",
+      "SALES": "Sales",
+      "PERSONAL": "Personal",
+      "OTHER": "Other"
+    }
+  },
+  "activityLog": {
+    "NEW_COMPANY": "New company \"{{name}}\" was added.",
+    "UPDATE_COMPANY": "{{description}}",
+    "DELETE_COMPANY": "Company \"{{name}}\" and all its data were removed.",
+    "NEW_USER": "New user \"{{name}}\" was added.",
+    "UPDATE_USER": "{{description}}",
+    "UPDATE_USER_PERMISSIONS": "Permissions for user {{name}} were updated.",
+    "NEW_CUSTOMER": "New customer \"{{name}}\" was added.",
+    "UPDATE_CUSTOMER": "Customer \"{{name}}\" was updated.",
+    "DELETE_CUSTOMER": "Customer \"{{name}}\" was removed.",
+    "NEW_SUPPLIER": "New supplier \"{{name}}\" was added.",
+    "UPDATE_SUPPLIER": "Supplier \"{{name}}\" was updated.",
+    "DELETE_SUPPLIER": "Supplier \"{{name}}\" was removed.",
+    "NEW_APPOINTMENT_SERIES": "New appointment series \"{{title}}\" was scheduled.",
+    "NEW_APPOINTMENT": "New appointment \"{{title}}\" was scheduled.",
+    "UPDATE_APPOINTMENT": "{{description}}",
+    "NEW_INTERACTION": "New interaction of type \"{{type}}\" logged for \"{{name}}\"."
+  },
+  "icons": {
+    "CustomerIcon": "Customer",
+    "UsersIcon": "Team",
+    "SupplierIcon": "Supplier",
+    "BriefcaseIcon": "Sales",
+    "TagIcon": "General",
+    "HeartIcon": "Personal",
+    "AgendaIcon": "Agenda",
+    "DashboardIcon": "Dashboard",
+    "ReportsIcon": "Reports",
+    "SettingsIcon": "Settings",
+    "HelpIcon": "Help",
+    "CalendarCheckIcon": "Completed"
+  }
+}
