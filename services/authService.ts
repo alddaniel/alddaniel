@@ -1,77 +1,172 @@
-import { MOCK_USERS } from '../constants';
-import { User } from '../types';
-
-const USER_KEY = 'business_hub_user';
+import { supabase, isSupabaseConfigured } from './supabaseClient';
+import { User, UserRole, Permission } from '../types';
+import { COLLABORATOR_PERMISSIONS, MANAGER_PERMISSIONS, ADMIN_PERMISSIONS } from '../constants';
 
 /**
- * Simulates a backend API call to log in.
- * In a real application, this would be a fetch/axios call to a server endpoint.
- * @param email The user's email.
- * @param password The user's password.
- * @param rememberMe Persist login across sessions.
- * @returns A promise that resolves with the User object on success.
+ * Fetches a user's profile from the public.users table in Supabase.
  */
-export const login = (email: string, password: string, rememberMe: boolean): Promise<User> => {
-    return new Promise((resolve, reject) => {
-        setTimeout(() => { // Simulate network delay
-            const user = MOCK_USERS.find(u => u.email === email);
+export const getUserProfile = async (userId: string): Promise<User | null> => {
+    if (!isSupabaseConfigured) return null;
 
-            // In a real backend, password would be hashed and compared securely.
-            const isPasswordCorrect = (user &&
-                ((user.email === 'ddarruspe@gmail.com' && password === '1906') ||
-                 (user.email !== 'ddarruspe@gmail.com' && password === 'password'))
-            );
+    const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-            if (user && isPasswordCorrect) {
-                // In a real app, the backend returns a user object and a JWT.
-                // We simulate this by storing the user object in localStorage or sessionStorage.
-                const userToStore = { id: user.id, name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl, companyId: user.companyId, gender: user.gender, permissions: user.permissions };
-                
-                // Ensure only one session type exists at a time for robustness.
-                if (rememberMe) {
-                    localStorage.setItem(USER_KEY, JSON.stringify(userToStore));
-                    sessionStorage.removeItem(USER_KEY); // Explicitly clear session storage
-                } else {
-                    sessionStorage.setItem(USER_KEY, JSON.stringify(userToStore));
-                    localStorage.removeItem(USER_KEY); // Explicitly clear local storage
-                }
-                
-                resolve(userToStore as User);
-            } else {
-                reject(new Error('login.errors.invalidCredentials'));
-            }
-        }, 500);
+    if (error) {
+        console.error('Error fetching user profile:', error);
+        return null;
+    }
+    
+    if (!data) return null;
+    
+    return {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        role: data.role as UserRole,
+        avatarUrl: data.avatar_url || undefined,
+        companyId: data.company_id,
+        permissions: (data.permissions as any as Permission[]) || [],
+        status: data.status as 'active' | 'pending'
+    };
+};
+
+/**
+ * Ensures a user profile exists in the database.
+ */
+export const getOrCreateUserProfile = async (authUser: any): Promise<User | null> => {
+    if (!authUser || !authUser.id || !authUser.email) return null;
+
+    // 1. Try to get existing profile
+    const profile = await getUserProfile(authUser.id);
+    if (profile) return profile;
+
+    console.warn(`User ${authUser.id} authenticated but has no profile. Attempting to create one...`);
+
+    // 2. Find a default company or create one (Fallbacks for safety)
+    let companyId = 'company-1';
+    const { data: companies } = await supabase.from('companies').select('id').limit(1);
+    if (companies && companies.length > 0) {
+        companyId = companies[0].id;
+    }
+
+    // 3. Create the user profile
+    const newUserProfile = {
+        id: authUser.id,
+        email: authUser.email,
+        name: authUser.user_metadata?.name || authUser.email.split('@')[0],
+        role: 'ADMIN', // Default to Admin for new setups
+        company_id: companyId,
+        permissions: ADMIN_PERMISSIONS,
+        status: 'active'
+    };
+
+    const { error: createError } = await supabase.from('users').insert(newUserProfile);
+
+    if (createError) {
+        console.error("Failed to create user profile:", createError);
+        throw new Error("Failed to initialize account structure.");
+    }
+
+    return {
+        id: newUserProfile.id,
+        name: newUserProfile.name,
+        email: newUserProfile.email,
+        role: UserRole.ADMIN,
+        companyId: newUserProfile.company_id,
+        permissions: newUserProfile.permissions as Permission[],
+        status: 'active'
+    };
+};
+
+/**
+ * Signs in a user using Supabase authentication.
+ */
+export const signIn = async (email: string, password: string): Promise<User> => {
+    if (!isSupabaseConfigured) throw new Error('System not configured.');
+
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
     });
-};
 
-/**
- * Simulates logging out by clearing the session from storage.
- */
-export const logout = (): void => {
-    localStorage.removeItem(USER_KEY);
-    sessionStorage.removeItem(USER_KEY);
-    // In a real app, you might also call a backend endpoint to invalidate the token.
-};
+    if (signInError) throw new Error(signInError.message);
+    if (!signInData.user) throw new Error('login.errors.invalidCredentials');
 
-/**
- * Gets the current authenticated user from storage, simulating a persistent session.
- * @returns The User object if a session exists, otherwise null.
- */
-export const getCurrentUser = (): User | null => {
-    // Prioritize localStorage (remember me) over sessionStorage
-    const userJson = localStorage.getItem(USER_KEY) || sessionStorage.getItem(USER_KEY);
-    if (!userJson) {
-        return null;
+    const userProfile = await getOrCreateUserProfile(signInData.user);
+
+    if (!userProfile) {
+        await supabase.auth.signOut();
+        throw new Error('User profile could not be loaded.');
     }
+
+    if (userProfile.status === 'pending') {
+        throw new Error('login.errors.pendingAccount');
+    }
+
+    return userProfile;
+};
+
+/**
+ * Signs out the current user.
+ */
+export const signOut = async (): Promise<void> => {
+    const { error } = await supabase.auth.signOut();
+    if (error) console.error('Error signing out:', error);
+};
+
+/**
+ * Creates a user record in the public table.
+ * Note: This does not create a Supabase Auth user (requires invite flow or service key).
+ * It creates a placeholder that allows the user to exist in the system logic.
+ */
+export const adminCreateUser = async (userData: Omit<User, 'id'>): Promise<User> => {
+    const { data, error } = await supabase
+        .from('users')
+        .insert({
+            id: crypto.randomUUID(), // Generate a temporary ID
+            name: userData.name,
+            email: userData.email,
+            role: userData.role,
+            company_id: userData.companyId,
+            permissions: userData.permissions,
+            status: 'pending',
+            avatar_url: userData.avatarUrl
+        })
+        .select()
+        .single();
+
+    if (error) throw new Error(error.message);
+
+    // Trigger password reset flow so they can "claim" this account if they sign up
     try {
-        // We need to parse date strings back into Date objects if any exist.
-        // For now, the user object is simple.
-        return JSON.parse(userJson) as User;
-    } catch (error) {
-        console.error("Failed to parse user from storage", error);
-        // Clear corrupted data from both
-        localStorage.removeItem(USER_KEY);
-        sessionStorage.removeItem(USER_KEY);
-        return null;
+        await sendPasswordResetEmail(userData.email);
+    } catch (e) {
+        console.warn("Could not send reset email:", e);
     }
+
+    return {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        role: data.role as UserRole,
+        companyId: data.company_id,
+        avatarUrl: data.avatar_url || undefined,
+        permissions: (data.permissions as any) || [],
+        status: 'pending',
+    };
+};
+
+export const sendPasswordResetEmail = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/#type=recovery`,
+    });
+    if (error) throw error;
+};
+
+export const updatePassword = async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw error;
 };

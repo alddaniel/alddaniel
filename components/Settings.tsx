@@ -1,999 +1,1086 @@
-
-
-import React, { useState, useEffect } from 'react';
-import { Company, User, UserRole, Permission } from '../types';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAppState } from '../state/AppContext';
-import { Modal } from './Modal';
-import { PlusIcon, EditIcon, TrashIcon, UserProfile } from './Icons';
-import Breadcrumbs from './Breadcrumbs';
-import { AvatarSelectionModal } from './AvatarSelectionModal';
-import { iconMap } from './Icons';
-import { IconPicker } from './ui/IconPicker';
-import { validateCNPJ } from '../services/validationService';
-import { USER_MANAGEABLE_PERMISSIONS } from '../constants';
 import { useLocalization } from '../contexts/LocalizationContext';
+import Breadcrumbs from './Breadcrumbs';
+import { Company, User, UserRole, Permission, Plan, CompanyHistory } from '../types';
+import { Modal } from './Modal';
+import { AvatarSelectionModal } from './AvatarSelectionModal';
+import { IconPickerModal } from './IconPickerModal';
+import { iconMap, PlusIcon, TrashIcon, EditIcon, UserProfile, WarningIcon, ClockRewindIcon, SearchIcon, BriefcaseIcon, UsersIcon, CustomerIcon, CheckCircleIcon, CloseIcon, WhatsAppIcon, SparklesIcon, LockIcon, KeyIcon } from './Icons';
+import { USER_MANAGEABLE_PERMISSIONS, COLLABORATOR_PERMISSIONS, MANAGER_PERMISSIONS, ADMIN_PERMISSIONS, ALL_PERMISSIONS, APPOINTMENT_CATEGORIES } from '../constants';
+import * as authService from '../services/authService';
+import { validateCNPJ } from '../services/validationService';
+import { maskCNPJ } from '../services/maskService';
+import { fetchBrazilianCompanyData as fetchCompanyData } from '../services/cnpjService';
+import { useLocation } from 'react-router-dom';
+import { IconPicker } from './ui/IconPicker';
 
-const formatCNPJ = (value: string): string => {
-    return value
-        .replace(/\D/g, '')
-        .slice(0, 14)
-        .replace(/(\d{2})(\d)/, '$1.$2')
-        .replace(/(\d{3})(\d)/, '$1.$2')
-        .replace(/(\d{3})(\d)/, '$1/$2')
-        .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+// --- Tab Navigation ---
+type SettingsTab = 'myCompany' | 'users' | 'categories' | 'companies' | 'permissions' | 'plans' | 'systemCustomization' | 'integrations';
+
+const TabButton: React.FC<{ label: string; isActive: boolean; onClick: () => void }> = ({ label, isActive, onClick }) => (
+    <button
+        onClick={onClick}
+        className={`whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm transition-colors ${
+            isActive
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600'
+        }`}
+    >
+        {label}
+    </button>
+);
+
+
+// --- My Company Tab ---
+const MyCompanyTab: React.FC<{ onEdit: () => void }> = ({ onEdit }) => {
+    const { state, hasPermission } = useAppState();
+    const { currentUser, companies } = state;
+    const { t } = useLocalization();
+    
+    const myCompany = useMemo(() => companies.find(c => c.id === currentUser?.companyId), [companies, currentUser]);
+
+    if (!myCompany) return <div>{t('common.error')}</div>;
+    
+    const identifierLabel = useMemo(() => {
+        return t('settings.company.cnpj');
+    }, [t]);
+
+
+    return (
+        <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
+                <div className="flex items-center gap-4">
+                    <UserProfile user={{ name: myCompany.name, avatarUrl: myCompany.logoUrl }} className="w-20 h-20 rounded-md" />
+                    <div>
+                        <h2 className="text-2xl font-bold text-secondary dark:text-gray-100">{myCompany.name}</h2>
+                        <p className="text-medium dark:text-gray-400">{myCompany.email}</p>
+                    </div>
+                </div>
+                {hasPermission('MANAGE_COMPANY_INFO') && (
+                    <button onClick={onEdit} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-hover self-start sm:self-auto">
+                        <EditIcon className="w-4 h-4" />
+                        {t('settings.company.editButton')}
+                    </button>
+                )}
+            </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 pt-4">
+                <div><strong className="block text-sm font-medium text-gray-500 dark:text-gray-400">{identifierLabel}</strong><span className="text-secondary dark:text-gray-200">{myCompany.cnpj}</span></div>
+                <div><strong className="block text-sm font-medium text-gray-500 dark:text-gray-400">{t('settings.company.phone')}</strong><span className="text-secondary dark:text-gray-200">{myCompany.phone}</span></div>
+                <div className="md:col-span-2"><strong className="block text-sm font-medium text-gray-500 dark:text-gray-400">{t('settings.company.address')}</strong><span className="text-secondary dark:text-gray-200">{myCompany.address}</span></div>
+            </div>
+        </div>
+    );
 };
 
-const UserForm: React.FC<{
-    user?: User | null;
-    onSave: (user: Omit<User, 'id' | 'permissions'> | User) => void;
-    onCancel: () => void;
-    isSuperAdmin: boolean;
-    allCompanies: Company[];
-    currentUser: User;
-}> = ({ user, onSave, onCancel, isSuperAdmin, allCompanies, currentUser }) => {
-    const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+// --- Users Tab ---
+const UsersTab: React.FC = () => {
+    const { state, dispatch, hasPermission } = useAppState();
+    const { users, companies, currentUser } = state;
+    const { t } = useLocalization();
+    const [isUserFormOpen, setIsUserFormOpen] = useState(false);
+    const [editingUser, setEditingUser] = useState<User | null>(null);
+
+    const visibleUsers = useMemo(() => {
+        if (!currentUser) return [];
+        return hasPermission('MANAGE_ALL_USERS') ? users : users.filter(u => u.companyId === currentUser.companyId);
+    }, [users, currentUser, hasPermission]);
+    
+    const handleSaveUser = async (userData: any) => {
+        const rolePermissions = userData.role === UserRole.ADMIN ? ADMIN_PERMISSIONS : userData.role === UserRole.MANAGER ? MANAGER_PERMISSIONS : COLLABORATOR_PERMISSIONS;
+        
+        if (editingUser) {
+            const updatedUser = { ...editingUser, ...userData, permissions: editingUser.role !== userData.role ? rolePermissions : editingUser.permissions };
+            dispatch({ type: 'UPDATE_USER', payload: updatedUser });
+            dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'notifications.userUpdated', type: 'success' } });
+        } else {
+            const newUser = await authService.adminCreateUser({
+                ...userData,
+                status: 'pending',
+                permissions: rolePermissions
+            });
+            dispatch({ type: 'ADD_USER', payload: newUser });
+            dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'notifications.userAddedWithReset', type: 'info' } });
+        }
+        setIsUserFormOpen(false);
+    };
+
+    const handleSendPasswordReset = async (email: string) => {
+        dispatch({ type: 'SHOW_LOADING' });
+        try {
+            await authService.sendPasswordResetEmail(email);
+            dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'notifications.passwordResetSent', type: 'success' } });
+        } catch (error) {
+            console.error(error);
+            dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'common.error', type: 'error' } });
+        } finally {
+            dispatch({ type: 'HIDE_LOADING' });
+        }
+    };
+
+    return (
+        <div>
+            <div className="flex justify-end mb-4">
+                <button onClick={() => { setEditingUser(null); setIsUserFormOpen(true); }} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-hover"><PlusIcon className="w-4 h-4" />{t('settings.users.add')}</button>
+            </div>
+             <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('settings.users.table.name')}</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('settings.users.table.role')}</th>
+                            {hasPermission('MANAGE_ALL_USERS') && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('settings.users.table.company')}</th>}
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.actions')}</th>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {visibleUsers.map(user => (
+                            <tr key={user.id}>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex items-center gap-3">
+                                        <UserProfile user={user} className="w-10 h-10" />
+                                        <div>
+                                            <div className="font-medium text-secondary dark:text-gray-100">{user.name}</div>
+                                            <div className="text-sm text-gray-500">{user.email}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4">{t(`settings.users.form.roles.${user.role.toLowerCase()}`)}</td>
+                                {hasPermission('MANAGE_ALL_USERS') && <td className="px-6 py-4">{companies.find(c => c.id === user.companyId)?.name}</td>}
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={() => handleSendPasswordReset(user.email)} title={t('settings.users.sendPasswordReset')} className="text-gray-400 hover:text-primary"><KeyIcon className="w-5 h-5"/></button>
+                                        <button onClick={() => { setEditingUser(user); setIsUserFormOpen(true); }} className="text-gray-400 hover:text-primary"><EditIcon className="w-5 h-5"/></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            {isUserFormOpen && <UserFormModal isOpen={isUserFormOpen} onClose={() => setIsUserFormOpen(false)} onSave={handleSaveUser} user={editingUser} />}
+        </div>
+    );
+};
+
+const UserFormModal: React.FC<{ isOpen: boolean, onClose: () => void, onSave: (data: any) => void, user: User | null }> = ({ isOpen, onClose, onSave, user }) => {
+    const { state, hasPermission } = useAppState();
+    const { companies, currentUser } = state;
+    const { t } = useLocalization();
     const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        role: UserRole.COLLABORATOR,
-        companyId: '',
-        avatarUrl: '',
+        name: user?.name || '',
+        email: user?.email || '',
+        role: user?.role || UserRole.COLLABORATOR,
+        companyId: user?.companyId || currentUser?.companyId || '',
+        avatarUrl: user?.avatarUrl || '',
     });
+    const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+    
+    const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); onSave(formData); };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={user ? t('settings.users.edit') : t('settings.users.add')}>
+             <form onSubmit={handleSubmit} className="space-y-4">
+                 <div className="flex items-center gap-4">
+                    <UserProfile user={{ name: formData.name, avatarUrl: formData.avatarUrl }} className="w-16 h-16" />
+                     <button type="button" onClick={() => setIsAvatarModalOpen(true)} className="text-sm font-semibold text-primary hover:underline">
+                        {t('settings.users.form.avatar')}
+                    </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div>
+                        <label className="block text-sm font-medium">{t('settings.users.form.fullName')}</label>
+                        <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium">{t('settings.users.form.email')}</label>
+                        <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required readOnly={!!user} className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600 read-only:bg-gray-100 dark:read-only:bg-gray-700" />
+                    </div>
+                     <div>
+                        <label className="block text-sm font-medium">{t('settings.users.form.role')}</label>
+                        <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value as UserRole})} className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600">
+                            <option value={UserRole.COLLABORATOR}>{t('settings.users.form.roles.collaborator')}</option>
+                            <option value={UserRole.MANAGER}>{t('settings.users.form.roles.manager')}</option>
+                            <option value={UserRole.ADMIN}>{t('settings.users.form.roles.admin')}</option>
+                        </select>
+                    </div>
+                    {hasPermission('MANAGE_ALL_USERS') && <div>
+                        <label className="block text-sm font-medium">{t('settings.users.form.company')}</label>
+                        <select value={formData.companyId} onChange={e => setFormData({...formData, companyId: e.target.value})} className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600">
+                            {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                    </div>}
+                </div>
+                 <div className="flex justify-end gap-4 pt-4">
+                    <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">{t('common.cancel')}</button>
+                    <button type="submit" className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover">{t('common.save')}</button>
+                </div>
+            </form>
+            <AvatarSelectionModal 
+                isOpen={isAvatarModalOpen}
+                onClose={() => setIsAvatarModalOpen(false)}
+                onSelectAvatar={url => {
+                    setFormData({...formData, avatarUrl: url});
+                    setIsAvatarModalOpen(false);
+                }}
+            />
+        </Modal>
+    );
+}
+
+// --- Company Management Tab ---
+const CompaniesManagementTab: React.FC = () => {
+    const { state, dispatch } = useAppState();
+    const { t } = useLocalization();
+    const { companies, users, plans } = state;
+    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+    const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
+    const [viewingHistoryCompany, setViewingHistoryCompany] = useState<Company | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const filteredCompanies = useMemo(() => {
+        return companies.filter(c =>
+            c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.cnpj.includes(searchTerm)
+        );
+    }, [companies, searchTerm]);
+
+    const handleSaveCompany = async (companyData: any, adminUserData: any) => {
+        if (editingCompany) {
+            dispatch({ type: 'UPDATE_COMPANY', payload: { company: {...editingCompany, ...companyData}, reason: companyData.reasonForChange } });
+            dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'notifications.companyUpdated', type: 'success' } });
+        } else {
+            const newCompanyId = `company-${Date.now()}`;
+            const newCompany: Company = {
+                id: newCompanyId,
+                ...companyData,
+                history: []
+            };
+            const newAdmin = await authService.adminCreateUser({
+                ...adminUserData,
+                companyId: newCompanyId,
+                role: UserRole.ADMIN,
+                permissions: ADMIN_PERMISSIONS, 
+                status: 'pending'
+            });
+            dispatch({ type: 'ADD_COMPANY', payload: { company: newCompany, adminUser: newAdmin } });
+            dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'notifications.companyAdded', type: 'success' } });
+            dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'notifications.userAddedWithReset', type: 'info' } });
+        }
+        setIsFormOpen(false);
+    };
+    
+    const handleDeleteCompany = () => {
+        if(companyToDelete) {
+             if (companyToDelete.id === 'company-1') {
+                alert(t('settings.companies.deleteWarning'));
+                setCompanyToDelete(null);
+                return;
+            }
+            dispatch({ type: 'DELETE_COMPANY', payload: companyToDelete.id });
+            dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'notifications.companyRemoved', type: 'success' } });
+            setCompanyToDelete(null);
+        }
+    };
+    
+    return (
+        <div>
+            <div className="flex justify-between items-center mb-4">
+                <div className="relative">
+                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder={t('settings.companies.searchPlaceholder')} className="pl-10 pr-4 py-2 w-full sm:w-64 border rounded-lg dark:bg-gray-800 dark:border-gray-600 focus:ring-primary focus:border-primary" />
+                </div>
+                <button onClick={() => { setEditingCompany(null); setIsFormOpen(true); }} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-hover">
+                    <PlusIcon className="w-4 h-4" />{t('settings.companies.add')}
+                </button>
+            </div>
+            <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                     <thead className="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('settings.companies.table.name')}</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('settings.companies.table.status')}</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.actions')}</th>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {filteredCompanies.map(company => (
+                            <tr key={company.id}>
+                                <td className="px-6 py-4">
+                                    <div className="font-medium text-secondary dark:text-gray-100">{company.name}</div>
+                                    <div className="text-sm text-gray-500">{company.cnpj}</div>
+                                </td>
+                                <td className="px-6 py-4"><span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">{t(`companyStatus.${company.status}`)}</span></td>
+                                <td className="px-6 py-4 flex items-center gap-4">
+                                    <button onClick={() => setViewingHistoryCompany(company)} title={t('settings.companies.historyTab')}><ClockRewindIcon className="w-5 h-5 text-gray-400 hover:text-primary"/></button>
+                                    <button onClick={() => { setEditingCompany(company); setIsFormOpen(true); }} title={t('common.edit')} className="text-gray-400 hover:text-primary"><EditIcon className="w-5 h-5"/></button>
+                                    <button onClick={() => setCompanyToDelete(company)} title={t('common.delete')} className="text-gray-400 hover:text-red-500"><TrashIcon className="w-5 h-5"/></button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+             {isFormOpen && <CompanyManagementFormModal isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSave={handleSaveCompany} company={editingCompany} plans={plans} />}
+             {viewingHistoryCompany && <CompanyHistoryModal company={viewingHistoryCompany} users={users} onClose={() => setViewingHistoryCompany(null)} />}
+             <Modal isOpen={!!companyToDelete} onClose={() => setCompanyToDelete(null)} title={t('settings.companies.confirmDeleteTitle')}>
+                <div className="text-center p-4">
+                    <WarningIcon className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                    <p className="text-gray-600 dark:text-gray-300" dangerouslySetInnerHTML={{ __html: t('settings.companies.confirmDelete', { name: companyToDelete?.name }) }} />
+                    <div className="flex justify-center gap-4 pt-6 mt-4">
+                        <button onClick={() => setCompanyToDelete(null)} className="px-6 py-2 bg-white border dark:bg-gray-700 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600">{t('common.cancel')}</button>
+                        <button onClick={handleDeleteCompany} className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">{t('common.delete')}</button>
+                    </div>
+                </div>
+            </Modal>
+        </div>
+    );
+};
+
+const CompanyHistoryModal: React.FC<{ company: Company, users: User[], onClose: () => void }> = ({ company, users, onClose }) => {
+    const { t } = useLocalization();
+    return (
+        <Modal isOpen={true} onClose={onClose} title={`${t('settings.companies.historyTab')}: ${company.name}`}>
+            {(company.history || []).length > 0 ? (
+                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-700"><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('settings.companies.historyTable.date')}</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('settings.companies.historyTable.changedBy')}</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('settings.companies.historyTable.newStatus')}</th><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('settings.companies.historyTable.reason')}</th></thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {company.history?.map((entry, idx) => {
+                            const user = users.find(u => u.id === entry.changedById);
+                            return (
+                                <tr key={idx}>
+                                    <td className="px-6 py-4">{new Date(entry.changedAt).toLocaleString()}</td>
+                                    <td className="px-6 py-4">{user?.name || 'Sistema'}</td>
+                                    <td className="px-6 py-4" dangerouslySetInnerHTML={{ __html: t('settings.companies.history.changedStatus', { old: t(`companyStatus.${entry.oldStatus}`), new: t(`companyStatus.${entry.newStatus}`) }) }}></td>
+                                    <td className="px-6 py-4">{entry.reason}</td>
+                                </tr>
+                            )
+                        })}
+                    </tbody>
+                </table>
+            ) : <p>{t('settings.companies.noHistory')}</p>}
+        </Modal>
+    );
+};
+
+const CompanyManagementFormModal: React.FC<{ isOpen: boolean, onClose: () => void, onSave: (companyData: any, adminUserData?: any) => void, company: Company | null, plans: Plan[] }> = ({ isOpen, onClose, onSave, company, plans }) => {
+    const { t } = useLocalization();
+    const { hasPermission, dispatch } = useAppState();
+
+    const getTrialDays = (trialDate: Date | null): number => {
+        if (!trialDate) return 30;
+        const remaining = Math.ceil((new Date(trialDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        return remaining > 0 ? remaining : 30;
+    };
+
+    const [formData, setFormData] = useState({
+        name: company?.name || '',
+        cnpj: company?.cnpj || '',
+        address: company?.address || '',
+        phone: company?.phone || '',
+        email: company?.email || '',
+        logoUrl: company?.logoUrl || '',
+        cep: company?.cep || '',
+        status: company?.status || 'active',
+        planId: company?.planId || plans[0]?.id || '',
+        trialDuration: getTrialDays(company?.trialEndsAt || null),
+        reasonForChange: '',
+    });
+    const [adminData, setAdminData] = useState({ name: '', email: '' });
+    const [isCnpjLoading, setIsCnpjLoading] = useState(false);
+    const [cnpjError, setCnpjError] = useState('');
+    const [isLogoModalOpen, setIsLogoModalOpen] = useState(false);
+
+    const companyPlan = useMemo(() => plans.find(p => p.id === formData.planId), [plans, formData.planId]);
+    const canChangeLogo = useMemo(() => (companyPlan?.allowBranding ?? false) || hasPermission('MANAGE_ALL_COMPANIES'), [companyPlan, hasPermission]);
+    
+    const identifierLabel = useMemo(() => {
+        return t('settings.company.cnpj');
+    }, [t]);
+
+    const handleCnpjChange = (value: string) => {
+        const maskedValue = maskCNPJ(value);
+        setFormData(prev => ({...prev, cnpj: maskedValue}));
+        if (cnpjError) setCnpjError('');
+    };
+
+
+    const handleCnpjBlur = async () => {
+        const cleanedCnpj = formData.cnpj.replace(/\D/g, '');
+        setCnpjError('');
+    
+        if (!cleanedCnpj) return;
+    
+        if (cleanedCnpj.length !== 14 || !validateCNPJ(cleanedCnpj)) {
+            setCnpjError(t('suppliers.form.errors.invalidCnpj'));
+            return;
+        }
+    
+        dispatch({ type: 'SHOW_LOADING' });
+        setIsCnpjLoading(true);
+        try {
+            const companyData = await fetchCompanyData(cleanedCnpj);
+            if (companyData) {
+                setFormData(prev => ({
+                    ...prev,
+                    name: companyData.name || prev.name,
+                    address: companyData.address || prev.address,
+                    phone: companyData.phone || prev.phone,
+                    email: companyData.email || prev.email,
+                    cep: companyData.cep || prev.cep,
+                }));
+                dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'notifications.companyDataFetched', type: 'success' } });
+            } else {
+                setCnpjError(t('suppliers.form.errors.cnpjNotFound'));
+            }
+        } finally {
+            setIsCnpjLoading(false);
+            dispatch({ type: 'HIDE_LOADING' });
+        }
+    };
+    
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const { trialDuration, ...restOfData } = formData;
+        const dataToSend: any = { ...restOfData };
+        
+        if (formData.status === 'trial') {
+            dataToSend.trialEndsAt = new Date(Date.now() + formData.trialDuration * 24 * 60 * 60 * 1000);
+        } else {
+            dataToSend.trialEndsAt = null;
+        }
+        
+        onSave(dataToSend, company ? undefined : adminData);
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={company ? t('settings.companies.edit') : t('settings.companies.add')}>
+           <form onSubmit={handleSubmit} className="space-y-6">
+                <fieldset className="p-4 border dark:border-gray-700 rounded-lg space-y-4">
+                    <legend className="text-lg font-semibold px-2">{t('settings.companies.detailsTab')}</legend>
+                    <div className="flex items-center gap-4">
+                        <UserProfile user={{ name: formData.name, avatarUrl: formData.logoUrl }} className="w-16 h-16 rounded-md" />
+                        {canChangeLogo && (
+                             <button type="button" onClick={() => setIsLogoModalOpen(true)} className="text-sm font-semibold text-primary hover:underline">
+                                {t('settings.company.changeLogo')}
+                            </button>
+                        )}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label className="block text-sm font-medium">{t('settings.company.name')}</label><input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600"/></div>
+                        <div>
+                            <label className="block text-sm font-medium">{identifierLabel}</label>
+                            <input type="text" value={formData.cnpj} onChange={e => handleCnpjChange(e.target.value)} onBlur={handleCnpjBlur} required className={`mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600 ${cnpjError ? 'border-red-500' : ''}`} />
+                            {isCnpjLoading && <p className="text-blue-500 text-xs mt-1">Buscando...</p>}
+                            {cnpjError && <p className="text-red-500 text-xs mt-1">{cnpjError}</p>}
+                        </div>
+                        <div><label className="block text-sm font-medium">{t('settings.company.phone')}</label><input type="tel" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600"/></div>
+                        <div><label className="block text-sm font-medium">{t('settings.company.contactEmail')}</label><input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600"/></div>
+                        <div className="md:col-span-2"><label className="block text-sm font-medium">{t('settings.company.address')}</label><input type="text" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600"/></div>
+                         <div><label className="block text-sm font-medium">{t('settings.companies.table.plan')}</label><select value={formData.planId} onChange={e => setFormData({...formData, planId: e.target.value})} className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600">{plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
+                        {company ? (
+                            <div>
+                                <label className="block text-sm font-medium">{t('settings.companies.table.status')}</label>
+                                <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as any})} className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600">
+                                    {['active', 'trial', 'suspended'].map(s => <option key={s} value={s}>{t(`companyStatus.${s}`)}</option>)}
+                                </select>
+                            </div>
+                        ) : (
+                            <div className="flex items-end pb-2">
+                                <label className="flex items-center">
+                                    <input type="checkbox" checked={formData.status === 'trial'} onChange={e => setFormData({ ...formData, status: e.target.checked ? 'trial' : 'active' })} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"/>
+                                    <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">{t('settings.companies.enableTrial')}</span>
+                                </label>
+                            </div>
+                        )}
+                        {formData.status === 'trial' && (
+                            <div>
+                                <label className="block text-sm font-medium">{t('settings.companies.trialDuration')}</label>
+                                <input type="number" min="1" value={formData.trialDuration} onChange={e => setFormData({...formData, trialDuration: Number(e.target.value)})} className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600"/>
+                            </div>
+                        )}
+                         {company && company.status !== formData.status && (
+                             <div className="md:col-span-2"><label className="block text-sm font-medium">{t('settings.companies.reasonForChange')}</label><input type="text" value={formData.reasonForChange} onChange={e => setFormData({...formData, reasonForChange: e.target.value})} required className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600"/></div>
+                         )}
+                    </div>
+                </fieldset>
+                {!company && (
+                    <fieldset className="p-4 border dark:border-gray-700 rounded-lg space-y-4">
+                        <legend className="text-lg font-semibold px-2">{t('settings.companies.adminInfo')}</legend>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label className="block text-sm font-medium">{t('settings.users.form.fullName')}</label><input type="text" value={adminData.name} onChange={e => setAdminData({...adminData, name: e.target.value})} required className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600"/></div>
+                            <div><label className="block text-sm font-medium">{t('settings.users.form.email')}</label><input type="email" value={adminData.email} onChange={e => setAdminData({...adminData, email: e.target.value})} required className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600"/></div>
+                        </div>
+                    </fieldset>
+                )}
+                <div className="flex justify-end gap-4"><button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 rounded-md">{t('common.cancel')}</button><button type="submit" className="px-4 py-2 bg-primary text-white rounded-md">{t('common.save')}</button></div>
+           </form>
+           <AvatarSelectionModal isOpen={isLogoModalOpen} onClose={() => setIsLogoModalOpen(false)} onSelectAvatar={url => setFormData({...formData, logoUrl: url})} />
+        </Modal>
+    );
+};
+
+
+const PermissionsTab: React.FC = () => {
+    const { state, dispatch } = useAppState();
+    const { t } = useLocalization();
+    const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+    const [userPermissions, setUserPermissions] = useState<Permission[]>([]);
 
     useEffect(() => {
-        if (user) {
-            setFormData({
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                companyId: user.companyId,
-                avatarUrl: user.avatarUrl || '',
-            });
+        if (selectedUserId) {
+            const user = state.users.find(u => u.id === selectedUserId);
+            setUserPermissions(user?.permissions || []);
         } else {
-            setFormData({
-                name: '',
-                email: '',
-                role: UserRole.COLLABORATOR,
-                companyId: isSuperAdmin ? '' : currentUser.companyId,
-                avatarUrl: '',
-            });
+            setUserPermissions([]);
         }
-    }, [user, isSuperAdmin, currentUser]);
+    }, [selectedUserId, state.users]);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+    const handleTogglePermission = (permission: Permission) => {
+        setUserPermissions(prev => prev.includes(permission) ? prev.filter(p => p !== permission) : [...prev, permission]);
     };
 
-    const handleAvatarSelect = (avatarUrl: string) => {
-        setFormData(prev => ({...prev, avatarUrl}));
-        setIsAvatarModalOpen(false);
+    const handleSave = () => {
+        if (selectedUserId) {
+            dispatch({ type: 'UPDATE_USER_PERMISSIONS', payload: { userId: selectedUserId, permissions: userPermissions } });
+            dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'notifications.permissionsSaved', type: 'success' } });
+        }
     };
+
+    const permissionGroups = {
+        dashboard: ['VIEW_DASHBOARD'],
+        customers: ['VIEW_CUSTOMERS', 'MANAGE_CUSTOMERS', 'DELETE_CUSTOMERS'],
+        suppliers: ['VIEW_SUPPLIERS', 'MANAGE_SUPPLIERS', 'DELETE_SUPPLIERS'],
+        agenda: ['VIEW_AGENDA', 'MANAGE_AGENDA'],
+        reports: ['VIEW_REPORTS'],
+        settings: ['VIEW_SETTINGS', 'MANAGE_COMPANY_INFO', 'MANAGE_USERS', 'MANAGE_CATEGORIES'],
+        superAdmin: ['MANAGE_ALL_USERS', 'MANAGE_PLANS']
+    };
+
+    const selectedUser = state.users.find(u => u.id === selectedUserId);
+
+    return (
+        <div>
+            <select onChange={e => setSelectedUserId(e.target.value || null)} className="mb-4 p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600">
+                <option value="">{t('settings.permissions.selectUser')}</option>
+                {state.users.map(user => <option key={user.id} value={user.id}>{user.name} ({user.email})</option>)}
+            </select>
+
+            {selectedUser ? (
+                <div className="space-y-6">
+                    <h3 className="text-xl font-bold">{t('settings.permissions.editingFor', { name: selectedUser.name })}</h3>
+                    {Object.entries(permissionGroups).map(([group, permissions]) => (
+                        <fieldset key={group} className="border dark:border-gray-700 p-4 rounded-lg">
+                            <legend className="font-semibold px-2 text-lg text-secondary dark:text-gray-200">{t(`settings.permissions.groups.${group}`)}</legend>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+                                {(permissions as Permission[]).map(permission => (
+                                     <label key={permission} className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700/50">
+                                        <input
+                                            type="checkbox"
+                                            checked={userPermissions.includes(permission)}
+                                            onChange={() => handleTogglePermission(permission)}
+                                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                        />
+                                        <span className="text-sm text-gray-700 dark:text-gray-300">{t(`settings.permissions.descriptions.${permission}`, {defaultValue: permission})}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </fieldset>
+                    ))}
+                    <div className="flex justify-end">
+                        <button onClick={handleSave} className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-primary-hover">{t('settings.permissions.save')}</button>
+                    </div>
+                </div>
+            ) : <p className="text-center text-gray-500 py-8">{t('settings.permissions.selectUserPrompt')}</p>}
+        </div>
+    );
+};
+
+// --- Plans Tab ---
+const PlanCard: React.FC<{
+    plan: Plan;
+    isCurrent: boolean;
+    onEdit: () => void;
+    onDelete: () => void;
+    canManage: boolean;
+}> = ({ plan, isCurrent, onEdit, onDelete, canManage }) => {
+    const { t } = useLocalization();
+
+    return (
+        <div className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 flex flex-col transition-all duration-300 ease-in-out hover:shadow-2xl hover:-translate-y-1 ${isCurrent ? 'border-2 border-primary' : 'border-2 border-transparent dark:border-gray-700'}`}>
+            {isCurrent && (
+                <div className="absolute top-0 right-0 mt-4 mr-4 bg-primary text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
+                    {t('settings.plans.currentPlan')}
+                </div>
+            )}
+            <h3 className="text-xl font-bold text-secondary dark:text-gray-100">{plan.name}</h3>
+            <div className="my-4 flex items-baseline">
+                <span className="text-4xl font-extrabold text-secondary dark:text-gray-100">${plan.price.toFixed(2)}</span>
+                <span className="ml-1 text-lg font-medium text-gray-500 dark:text-gray-400">{t('settings.plans.perMonth')}</span>
+            </div>
+            <ul className="space-y-3 text-sm text-gray-600 dark:text-gray-400 flex-grow">
+                <li className="flex items-center gap-3">
+                    <UsersIcon className="w-5 h-5 text-primary" />
+                    <span>{t('settings.plans.userLimit', { count: plan.userLimit })}</span>
+                </li>
+                <li className="flex items-center gap-3">
+                    <CustomerIcon className="w-5 h-5 text-primary" />
+                    <span>{t('settings.plans.customerLimit', { count: plan.customerLimit })}</span>
+                </li>
+                <li className="flex items-center gap-3">
+                    {plan.hasWhatsApp ? <CheckCircleIcon className="w-5 h-5 text-green-500" /> : <CloseIcon className="w-5 h-5 text-red-500" />}
+                    <span>{t('settings.plans.features.whatsApp')}</span>
+                </li>
+                 <li className="flex items-center gap-3">
+                    {plan.hasAI ? <CheckCircleIcon className="w-5 h-5 text-green-500" /> : <CloseIcon className="w-5 h-5 text-red-500" />}
+                    <span>{t('settings.plans.features.ai')}</span>
+                </li>
+                 <li className="flex items-center gap-3">
+                    {plan.allowBranding ? <CheckCircleIcon className="w-5 h-5 text-green-500" /> : <CloseIcon className="w-5 h-5 text-red-500" />}
+                    <span>{t('settings.plans.features.branding')}</span>
+                </li>
+            </ul>
+            {canManage && (
+                <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                    <button onClick={onEdit} className="flex-1 text-center bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                        {t('common.edit')}
+                    </button>
+                    <button onClick={onDelete} className="text-gray-400 hover:text-red-500 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
+                        <TrashIcon className="w-5 h-5" />
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+
+const PlansTab: React.FC = () => {
+    const { state, dispatch, hasPermission } = useAppState();
+    const { plans, companies, currentUser } = state;
+    const { t } = useLocalization();
+    const [isPlanFormOpen, setIsPlanFormOpen] = useState(false);
+    const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
+    const [planToDelete, setPlanToDelete] = useState<Plan | null>(null);
+
+    const canManagePlans = hasPermission('MANAGE_PLANS');
+    const myCompany = useMemo(() => companies.find(c => c.id === currentUser?.companyId), [companies, currentUser]);
+
+    const handleSavePlan = (planData: Omit<Plan, 'id'>) => {
+        if (editingPlan) {
+            dispatch({ type: 'UPDATE_PLAN', payload: { ...editingPlan, ...planData } });
+            dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'notifications.planUpdated', type: 'success' } });
+        } else {
+            dispatch({ type: 'ADD_PLAN', payload: { id: `plan-${Date.now()}`, ...planData } });
+            dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'notifications.planAdded', type: 'success' } });
+        }
+        setIsPlanFormOpen(false);
+    };
+
+    const handleDeletePlan = () => {
+        if (planToDelete) {
+            const isPlanInUse = state.companies.some(c => c.planId === planToDelete.id);
+            dispatch({ type: 'DELETE_PLAN', payload: planToDelete.id });
+            if (!isPlanInUse) {
+                dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'notifications.planRemoved', type: 'success' } });
+            }
+            setPlanToDelete(null);
+        }
+    };
+    
+    const openAddForm = () => {
+        setEditingPlan(null);
+        setIsPlanFormOpen(true);
+    };
+
+    return (
+        <div>
+            {canManagePlans && (
+                <div className="flex justify-end mb-6">
+                    <button onClick={openAddForm} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-hover">
+                        <PlusIcon className="w-4 h-4" />{t('settings.plans.add')}
+                    </button>
+                </div>
+            )}
+            
+            {plans.length > 0 ? (
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {plans.map(plan => (
+                        <PlanCard 
+                            key={plan.id}
+                            plan={plan}
+                            isCurrent={!canManagePlans && myCompany?.planId === plan.id}
+                            onEdit={() => { setEditingPlan(plan); setIsPlanFormOpen(true); }}
+                            onDelete={() => setPlanToDelete(plan)}
+                            canManage={canManagePlans}
+                        />
+                    ))}
+                </div>
+            ) : (
+                <div className="text-center py-16 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
+                    <BriefcaseIcon className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-xl font-medium text-gray-900 dark:text-gray-200">{t('settings.plans.noPlansTitle')}</h3>
+                    <p className="mt-1 text-sm text-gray-500">{t('settings.plans.noPlansDescription')}</p>
+                    {canManagePlans && (
+                        <div className="mt-6">
+                            <button onClick={openAddForm} type="button" className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-hover">
+                                <PlusIcon className="-ml-1 mr-2 h-5 w-5" />
+                                {t('settings.plans.createFirstPlan')}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {isPlanFormOpen && <PlanFormModal isOpen={isPlanFormOpen} onClose={() => setIsPlanFormOpen(false)} onSave={handleSavePlan} plan={editingPlan} />}
+            
+            <Modal isOpen={!!planToDelete} onClose={() => setPlanToDelete(null)} title={t('settings.plans.confirmDeleteTitle')}>
+                <div className="text-center p-4">
+                    <p className="text-gray-600 dark:text-gray-300">{t('settings.plans.confirmDeleteBody', { name: planToDelete?.name })}</p>
+                    <div className="flex justify-center gap-4 pt-6 mt-4">
+                        <button onClick={() => setPlanToDelete(null)} className="px-6 py-2 bg-white border dark:bg-gray-700 dark:border-gray-600 rounded-md">{t('common.cancel')}</button>
+                        <button onClick={handleDeletePlan} className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">{t('common.delete')}</button>
+                    </div>
+                </div>
+            </Modal>
+        </div>
+    );
+};
+
+const PlanFormModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    onSave: (data: Omit<Plan, 'id'>) => void;
+    plan: Plan | null;
+}> = ({ isOpen, onClose, onSave, plan }) => {
+    const { t } = useLocalization();
+    const [formData, setFormData] = useState({
+        name: plan?.name || '',
+        price: plan?.price || 0,
+        userLimit: plan?.userLimit || 1,
+        customerLimit: plan?.customerLimit || 10,
+        hasWhatsApp: plan?.hasWhatsApp || false,
+        hasAI: plan?.hasAI || false,
+        allowBranding: plan?.allowBranding || false,
+    });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (isSuperAdmin && !user && !formData.companyId) {
-            alert("Por favor, selecione uma empresa para o novo usuário.");
-            return;
-        }
-        onSave(user ? { ...user, ...formData } : formData);
+        onSave(formData);
     };
 
-    const companyName = user ? allCompanies.find(c => c.id === user.companyId)?.name : '';
+    const FeatureToggle: React.FC<{ label: string; checked: boolean; onChange: (checked: boolean) => void; icon: React.FC<any> }> = ({ label, checked, onChange, icon: Icon }) => (
+        <label className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all ${checked ? 'border-primary bg-primary/5' : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'}`}>
+            <div className="flex items-center gap-3">
+                <Icon className={`w-6 h-6 ${checked ? 'text-primary' : 'text-gray-400'}`} />
+                <span className="font-semibold text-gray-800 dark:text-gray-200">{label}</span>
+            </div>
+            <div className={`w-11 h-6 rounded-full flex items-center p-1 transition-colors ${checked ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                <div className={`w-4 h-4 bg-white rounded-full shadow-md transform transition-transform ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
+            </div>
+            <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="sr-only" />
+        </label>
+    );
 
     return (
-        <>
-        <form onSubmit={handleSubmit} className="space-y-4">
-             <div className="flex flex-col items-center gap-4 pt-2 pb-4 border-b dark:border-gray-700">
-                <UserProfile user={{ name: formData.name, avatarUrl: formData.avatarUrl }} className="w-24 h-24" />
-                <div className="flex items-end gap-4">
-                    <button
-                        type="button"
-                        onClick={() => setIsAvatarModalOpen(true)}
-                        className="bg-white dark:bg-gray-700 py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 h-fit"
-                    >
-                        Alterar Avatar
+        <Modal isOpen={isOpen} onClose={onClose} title={plan ? t('settings.plans.edit') : t('settings.plans.addNew')}>
+            <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium">{t('settings.plans.form.name')}</label>
+                        <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium">{t('settings.plans.form.price')}</label>
+                        <input type="number" step="0.01" min="0" value={formData.price} onChange={e => setFormData({...formData, price: parseFloat(e.target.value) || 0})} required className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium">{t('settings.plans.form.userLimit')}</label>
+                        <input type="number" min="1" value={formData.userLimit} onChange={e => setFormData({...formData, userLimit: parseInt(e.target.value, 10) || 1})} required className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium">{t('settings.plans.form.customerLimit')}</label>
+                        <input type="number" min="1" value={formData.customerLimit} onChange={e => setFormData({...formData, customerLimit: parseInt(e.target.value, 10) || 1})} required className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600" />
+                    </div>
+                </div>
+                <div className="space-y-3">
+                    <FeatureToggle label={t('settings.plans.form.hasWhatsApp')} icon={WhatsAppIcon} checked={formData.hasWhatsApp} onChange={checked => setFormData({...formData, hasWhatsApp: checked})} />
+                    <FeatureToggle label={t('settings.plans.form.hasAI')} icon={SparklesIcon} checked={formData.hasAI} onChange={checked => setFormData({...formData, hasAI: checked})} />
+                    <FeatureToggle label={t('settings.plans.form.allowBranding')} icon={LockIcon} checked={formData.allowBranding} onChange={checked => setFormData({...formData, allowBranding: checked})} />
+                </div>
+                 <div className="flex justify-end gap-4 pt-4">
+                    <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">{t('common.cancel')}</button>
+                    <button type="submit" className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover">{t('common.save')}</button>
+                </div>
+            </form>
+        </Modal>
+    );
+};
+
+// --- System Customization ---
+const SystemCustomizationTab: React.FC = () => {
+    const { state, dispatch } = useAppState();
+    const { t } = useLocalization();
+    const [isLogoModalOpen, setIsLogoModalOpen] = useState(false);
+
+    const handleSelectLogo = (url: string) => {
+        dispatch({ type: 'UPDATE_SYSTEM_LOGO', payload: url });
+        dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'notifications.systemLogoUpdated', type: 'success' }});
+        setIsLogoModalOpen(false);
+    };
+
+    const handleRemoveLogo = () => {
+        if (window.confirm("Are you sure you want to remove the system logo?")) {
+            dispatch({ type: 'REMOVE_SYSTEM_LOGO' });
+            dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'notifications.systemLogoRemoved', type: 'info' }});
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-secondary dark:text-gray-100">{t('settings.customization.title')}</h2>
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-secondary dark:text-gray-200">{t('settings.customization.logoTitle')}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{t('settings.customization.logoDescription')}</p>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 p-4 border-2 border-dashed dark:border-gray-600 rounded-lg">
+                    {state.systemLogoUrl ? (
+                        <img src={state.systemLogoUrl} alt="System Logo" className="max-w-xs h-auto max-h-16 object-contain bg-gray-100 dark:bg-gray-700 p-2 rounded-md" />
+                    ) : (
+                        <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-md text-gray-500 dark:text-gray-400 text-sm">
+                            {t('settings.customization.noLogo')}
+                        </div>
+                    )}
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => setIsLogoModalOpen(true)} className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-hover">{t('settings.customization.changeLogo')}</button>
+                        {state.systemLogoUrl && (
+                             <button onClick={handleRemoveLogo} className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-red-600">{t('settings.customization.removeLogo')}</button>
+                        )}
+                    </div>
+                </div>
+            </div>
+            <AvatarSelectionModal isOpen={isLogoModalOpen} onClose={() => setIsLogoModalOpen(false)} onSelectAvatar={handleSelectLogo} />
+        </div>
+    );
+};
+
+// --- Categories Tab ---
+const CategoriesTab: React.FC = () => {
+    const { state, dispatch } = useAppState();
+    const { t } = useLocalization();
+    // FIX: Explicitly type the localCategories state to resolve multiple 'property does not exist on type unknown' errors.
+    // This ensures that values from localCategories are correctly typed as objects with name, color, and icon properties.
+    const [localCategories, setLocalCategories] = useState<Record<string, { name?: string; color: string; icon: string; }>>(state.appointmentCategoryConfig);
+    const [errors, setErrors] = useState<string[]>([]);
+    const originalKeys = Object.values(APPOINTMENT_CATEGORIES);
+
+    const handleUpdate = (key: string, field: 'name' | 'color' | 'icon', value: string) => {
+        setLocalCategories(prev => ({
+            ...prev,
+            [key]: { ...(prev[key] as object), [field]: value }
+        }));
+    };
+
+    const handleAddNew = () => {
+        const newKey = `CUSTOM_${Date.now()}`;
+        setLocalCategories(prev => ({
+            ...prev,
+            [newKey]: { name: t('settings.categories.new'), color: '#cccccc', icon: 'TagIcon' }
+        }));
+    };
+
+    const handleDelete = (key: string) => {
+        if (Object.keys(localCategories).length <= 1) {
+            alert(t('settings.categories.deleteWarning'));
+            return;
+        }
+        if (window.confirm(t('settings.categories.confirmDelete', { name: (localCategories[key] as any)?.name || key }))) {
+            setLocalCategories(prev => {
+                const newState = { ...prev };
+                delete newState[key];
+                return newState;
+            });
+        }
+    };
+
+    const handleSaveChanges = () => {
+        const currentErrors: string[] = [];
+        const names = new Set();
+        Object.entries(localCategories).forEach(([key, value]) => {
+            const categoryValue = value as { name?: string };
+            if (!categoryValue.name || categoryValue.name.trim() === '') {
+                currentErrors.push(t('settings.categories.errors.emptyName'));
+            }
+            if (names.has(categoryValue.name)) {
+                currentErrors.push(t('settings.categories.errors.duplicateName', { name: categoryValue.name! }));
+            }
+            names.add(categoryValue.name);
+        });
+
+        if (currentErrors.length > 0) {
+            setErrors([...new Set(currentErrors)]);
+            return;
+        }
+
+        setErrors([]);
+        dispatch({ type: 'UPDATE_CATEGORY_CONFIG', payload: localCategories });
+        dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'notifications.categoriesSaved', type: 'success' } });
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-secondary dark:text-gray-100">{t('settings.categories.title')}</h2>
+                <div className="flex gap-2">
+                    <button onClick={handleAddNew} className="flex items-center gap-2 bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-300 dark:hover:bg-gray-600">
+                        <PlusIcon className="w-4 h-4" />
+                        {t('settings.categories.new')}
+                    </button>
+                    <button onClick={handleSaveChanges} className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-hover">
+                        {t('settings.categories.save')}
                     </button>
                 </div>
             </div>
-            <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome Completo</label>
-                <input type="text" name="name" id="name" value={formData.name} onChange={handleChange} required className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary" />
-            </div>
-            <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-                <input type="email" name="email" id="email" value={formData.email} onChange={handleChange} required pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$" title="Por favor, insira um endereço de e-mail válido." className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary" />
-            </div>
-             <div>
-                <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Permissão</label>
-                <select name="role" id="role" value={formData.role} onChange={handleChange} className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary">
-                    {Object.values(UserRole).map(role => (
-                        <option key={role} value={role}>{role}</option>
-                    ))}
-                </select>
-            </div>
-
-            {isSuperAdmin && !user && (
-                <div>
-                    <label htmlFor="companyId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Empresa</label>
-                    <select name="companyId" id="companyId" value={formData.companyId} onChange={handleChange} required className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary">
-                        <option value="" disabled>Selecione uma empresa</option>
-                        {allCompanies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
+            {errors.length > 0 && (
+                <div className="bg-red-100 border border-red-400 text-red-700 dark:bg-red-900/20 dark:text-red-300 dark:border-red-600 px-4 py-3 rounded space-y-1">
+                    {errors.map((error, i) => <p key={i}>{error}</p>)}
                 </div>
             )}
-
-            {user && (
-                 <div>
-                    <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Empresa</label>
-                    <input type="text" name="companyName" id="companyName" value={companyName} disabled className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-gray-100 dark:bg-gray-700 cursor-not-allowed" />
-                </div>
-            )}
-
-
-            <div className="flex justify-end gap-4 pt-4">
-                <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition-colors">Cancelar</button>
-                <button type="submit" className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover transition-colors">{user ? 'Salvar Alterações' : 'Adicionar Usuário'}</button>
+            <div className="space-y-4">
+                {Object.entries(localCategories).map(([key, config]) => {
+                    const isDefault = originalKeys.includes(key);
+                    const typedConfig = config as { name?: string; color: string; icon: string; };
+                    return (
+                        <div key={key} className="flex flex-col md:flex-row items-center gap-3 p-3 border dark:border-gray-700 rounded-lg">
+                            <IconPicker value={typedConfig.icon} onChange={(icon) => handleUpdate(key, 'icon', icon)} />
+                            <input type="color" value={typedConfig.color} onChange={(e) => handleUpdate(key, 'color', e.target.value)} className="w-12 h-12 p-1 bg-white dark:bg-gray-800 border dark:border-gray-600 rounded-md cursor-pointer" />
+                            <input type="text" value={typedConfig.name || t(`appointment.category.${key}`)} onChange={(e) => handleUpdate(key, 'name', e.target.value)}
+                                readOnly={isDefault}
+                                title={isDefault ? t('settings.categories.tooltips.cannotEditName') : ''}
+                                className="flex-grow p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary read-only:bg-gray-100 dark:read-only:bg-gray-700 read-only:cursor-not-allowed"
+                            />
+                            <button onClick={() => handleDelete(key)} disabled={isDefault} title={isDefault ? t('settings.categories.tooltips.cannotDelete') : ''} className="text-gray-400 hover:text-red-500 disabled:text-gray-300 dark:disabled:text-gray-600 disabled:cursor-not-allowed">
+                                <TrashIcon className="w-6 h-6" />
+                            </button>
+                        </div>
+                    )
+                })}
             </div>
-        </form>
-        <AvatarSelectionModal
-            isOpen={isAvatarModalOpen}
-            onClose={() => setIsAvatarModalOpen(false)}
-            onSelectAvatar={handleAvatarSelect}
-        />
-        </>
+        </div>
     );
-}
+};
 
-const CompanyForm: React.FC<{
-    company?: Company | null;
-    onSave: (company: any) => void;
-    onCancel: () => void;
-}> = ({ company, onSave, onCancel }) => {
-    const [error, setError] = useState('');
-    const [formData, setFormData] = useState({
-        name: '',
-        cnpj: '',
-        address: '',
-        phone: '',
-        email: '',
-        logoUrl: '',
-    });
+// --- Integrations Tab ---
+const IntegrationsTab: React.FC = () => {
+    const { t } = useLocalization();
+    const { dispatch } = useAppState();
+    const [whatsAppPhoneId, setWhatsAppPhoneId] = useState(() => localStorage.getItem('wa_phone_id') || '');
+    const [whatsAppToken, setWhatsAppToken] = useState(() => localStorage.getItem('wa_access_token') || '');
 
-    useEffect(() => {
-        setFormData({
-            name: company?.name || '',
-            cnpj: company?.cnpj || '',
-            address: company?.address || '',
-            phone: company?.phone || '',
-            email: company?.email || '',
-            logoUrl: company?.logoUrl || '',
-        });
-    }, [company]);
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        if (name === 'cnpj') {
-            setFormData(prev => ({ ...prev, cnpj: formatCNPJ(value) }));
-        } else {
-            setFormData(prev => ({ ...prev, [name]: value }));
-        }
-    };
-    
-    const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setFormData(prev => ({ ...prev, logoUrl: reader.result as string }));
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
-
-        if (!validateCNPJ(formData.cnpj)) {
-            setError('CNPJ inválido. Por favor, verifique o número digitado.');
-            return;
-        }
-
-        onSave(company ? { ...company, ...formData } : formData);
+    const handleSave = () => {
+        localStorage.setItem('wa_phone_id', whatsAppPhoneId);
+        localStorage.setItem('wa_access_token', whatsAppToken);
+        dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'settings.integrations.savedSuccess', type: 'success' } });
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
-            {error && <div className="p-3 my-2 text-sm text-red-700 bg-red-100 border border-red-400 rounded-md dark:bg-red-900/20 dark:text-red-300 dark:border-red-600" role="alert">{error}</div>}
+        <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-secondary dark:text-gray-100">{t('settings.integrations.title')}</h2>
+            <p className="text-medium dark:text-gray-400">{t('settings.integrations.description')}</p>
             
-             <div className="flex flex-col items-center gap-4 pt-2 pb-6 border-b dark:border-gray-700">
-                <h3 className="text-lg font-semibold text-secondary dark:text-gray-200">Logo da Empresa</h3>
-                <UserProfile user={{ name: formData.name, avatarUrl: formData.logoUrl }} className="w-24 h-24 rounded-md object-contain" />
-                <input type="file" id="company-logo-upload" className="sr-only" onChange={handleLogoChange} accept="image/png, image/jpeg, image/svg+xml" />
-                <label htmlFor="company-logo-upload" className="cursor-pointer bg-white dark:bg-gray-700 py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-                    Alterar Logo
-                </label>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label htmlFor="comp-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome da Empresa</label>
-                    <input type="text" name="name" id="comp-name" value={formData.name} onChange={handleChange} required className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary" />
+            <div className="p-6 border dark:border-gray-700 rounded-lg space-y-4">
+                 <h3 className="text-xl font-semibold text-secondary dark:text-gray-200 flex items-center gap-2">
+                    <WhatsAppIcon className="w-6 h-6 text-green-500" />
+                    WhatsApp Cloud API
+                </h3>
+                 <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('settings.integrations.whatsApp.phoneId')}</label>
+                    <input type="text" value={whatsAppPhoneId} onChange={e => setWhatsAppPhoneId(e.target.value)} className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600"/>
                 </div>
-                <div>
-                    <label htmlFor="comp-cnpj" className="block text-sm font-medium text-gray-700 dark:text-gray-300">CNPJ</label>
-                    <input type="text" name="cnpj" id="comp-cnpj" value={formData.cnpj} onChange={handleChange} required maxLength={18} className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary" />
+                 <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('settings.integrations.whatsApp.token')}</label>
+                    <input type="password" value={whatsAppToken} onChange={e => setWhatsAppToken(e.target.value)} className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600"/>
                 </div>
-            </div>
-            <div>
-                <label htmlFor="comp-address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Endereço</label>
-                <input type="text" name="address" id="comp-address" value={formData.address} onChange={handleChange} required className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary" />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label htmlFor="comp-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">E-mail de Contato</label>
-                    <input type="email" name="email" id="comp-email" value={formData.email} onChange={handleChange} required pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$" title="Por favor, insira um endereço de e-mail válido." className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary" />
-                </div>
-                <div>
-                    <label htmlFor="comp-phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Telefone</label>
-                    <input type="tel" name="phone" id="comp-phone" value={formData.phone} onChange={handleChange} required className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary" />
+                 <div className="flex justify-end">
+                    <button onClick={handleSave} className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-hover">
+                        {t('common.save')}
+                    </button>
                 </div>
             </div>
-            <div className="flex justify-end gap-4 pt-4">
-                <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition-colors">Cancelar</button>
-                <button type="submit" className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover transition-colors">{company ? 'Salvar Alterações' : 'Adicionar Empresa'}</button>
-            </div>
-        </form>
+        </div>
     );
-}
-
-// Helper function to generate a description of changes for a company
-const generateCompanyChangesDescription = (oldCompany: Company, newCompany: Company): string => {
-    const changes: string[] = [];
-    if (oldCompany.name !== newCompany.name) {
-        changes.push(`nome de "${oldCompany.name}" para "${newCompany.name}"`);
-    }
-    if (oldCompany.cnpj !== newCompany.cnpj) {
-        changes.push(`CNPJ alterado`);
-    }
-    if (oldCompany.address !== newCompany.address) {
-        changes.push(`endereço alterado`);
-    }
-    if (oldCompany.phone !== newCompany.phone) {
-        changes.push(`telefone alterado`);
-    }
-     if (oldCompany.email !== newCompany.email) {
-        changes.push(`email alterado`);
-    }
-    if (oldCompany.logoUrl !== newCompany.logoUrl) {
-        changes.push('logo alterado');
-    }
-
-    if (changes.length === 0) {
-        return `Nenhuma alteração detectada para a empresa "${newCompany.name}".`;
-    }
-
-    return `Empresa "${newCompany.name}" atualizada: ${changes.join(', ')}.`;
-};
-
-// Helper function to generate a description of changes for a user
-const generateUserChangesDescription = (oldUser: User, newUser: Omit<User, 'id' | 'permissions'> | User): string => {
-    const changes: string[] = [];
-    if (oldUser.name !== newUser.name) {
-        changes.push(`nome de "${oldUser.name}" para "${newUser.name}"`);
-    }
-    if (oldUser.email !== newUser.email) {
-        changes.push(`email de "${oldUser.email}" para "${newUser.email}"`);
-    }
-    if (oldUser.role !== newUser.role) {
-        changes.push(`permissão de "${oldUser.role}" para "${newUser.role}"`);
-    }
-
-    if (changes.length === 0) {
-        return `Nenhuma alteração detectada para o usuário "${newUser.name}".`;
-    }
-
-    return `Usuário "${newUser.name}" atualizado: ${changes.join(', ')}.`;
-};
-
-const permissionGroups = [
-  {
-    title: 'Painel',
-    permissions: ['VIEW_DASHBOARD']
-  },
-  {
-    title: 'Clientes',
-    permissions: ['VIEW_CUSTOMERS', 'MANAGE_CUSTOMERS', 'DELETE_CUSTOMERS']
-  },
-  {
-    title: 'Fornecedores',
-    permissions: ['VIEW_SUPPLIERS', 'MANAGE_SUPPLIERS', 'DELETE_SUPPLIERS']
-  },
-  {
-    title: 'Agenda',
-    permissions: ['VIEW_AGENDA', 'MANAGE_AGENDA']
-  },
-  {
-    title: 'Relatórios',
-    permissions: ['VIEW_REPORTS']
-  },
-  {
-    title: 'Configurações',
-    permissions: ['VIEW_SETTINGS', 'MANAGE_COMPANY_INFO', 'MANAGE_USERS', 'MANAGE_CATEGORIES']
-  },
-  {
-    title: 'Administração Geral',
-    permissions: ['MANAGE_ALL_USERS']
-  }
-];
-
-const permissionDescriptions: Record<Permission, string> = {
-    'VIEW_DASHBOARD': 'Visualizar painel',
-    'VIEW_CUSTOMERS': 'Visualizar clientes',
-    'MANAGE_CUSTOMERS': 'Adicionar/Editar clientes',
-    'DELETE_CUSTOMERS': 'Excluir clientes',
-    'VIEW_SUPPLIERS': 'Visualizar fornecedores',
-    'MANAGE_SUPPLIERS': 'Adicionar/Editar fornecedores',
-    'DELETE_SUPPLIERS': 'Excluir fornecedores',
-    'VIEW_AGENDA': 'Visualizar agenda',
-    'MANAGE_AGENDA': 'Gerenciar agenda (criar/editar eventos)',
-    'VIEW_REPORTS': 'Visualizar relatórios',
-    'VIEW_SETTINGS': 'Acessar configurações',
-    'MANAGE_COMPANY_INFO': 'Editar informações da própria empresa',
-    'MANAGE_USERS': 'Gerenciar usuários da própria empresa',
-    'MANAGE_CATEGORIES': 'Gerenciar categorias de compromissos',
-    'MANAGE_ALL_USERS': 'Gerenciar usuários de QUALQUER empresa',
-    'MANAGE_ALL_COMPANIES': 'Gerenciar todas as empresas',
-    'MANAGE_PERMISSIONS': 'Gerenciar permissões detalhadas dos usuários',
 };
 
 
+// --- Main Component ---
 const Settings: React.FC = () => {
     const { state, dispatch, hasPermission } = useAppState();
     const { t } = useLocalization();
-    const { currentUser, users, companies, appointmentCategoryConfig } = state;
-    if (!currentUser) return null;
+    const location = useLocation();
 
-    const company = companies.find(c => c.id === currentUser.companyId)!;
-    const isSuperAdmin = currentUser.email === 'ddarruspe@gmail.com';
+    const initialTab = (location.state as { tab?: SettingsTab })?.tab || 'myCompany';
+    const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
+    const [isCompanyFormOpen, setIsCompanyFormOpen] = useState(false);
 
-    const userUsers = isSuperAdmin ? users : users.filter(u => u.companyId === currentUser.companyId);
-
-    type SettingsTab = 'company' | 'users' | 'companies' | 'categories' | 'permissions' | 'systemCustomization';
-    const [activeTab, setActiveTab] = useState<SettingsTab>(isSuperAdmin ? 'companies' : 'company');
-    const [companyData, setCompanyData] = useState<Company>(company);
-    const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-    const [editingUser, setEditingUser] = useState<User | null>(null);
-    const [isCompanyModalOpen, setIsCompanyModalOpen] = useState(false);
-    const [editingCompany, setEditingCompany] = useState<Company | null>(null);
-
-    // State for permissions tab
-    const [selectedUserId, setSelectedUserId] = useState<string>('');
-    const [userPermissions, setUserPermissions] = useState<Set<Permission>>(new Set());
-    const [initialPermissions, setInitialPermissions] = useState<Set<Permission>>(new Set());
+    const handleSaveCompany = (companyData: any) => {
+        const { reasonForChange, ...data } = companyData;
+        dispatch({ type: 'UPDATE_COMPANY', payload: { company: data, reason: reasonForChange } });
+        dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'notifications.companyUpdated', type: 'success' } });
+        setIsCompanyFormOpen(false);
+    };
     
-    // State for System Customization
-    const [systemLogo, setSystemLogo] = useState<string | null>(null);
-    const [initialSystemLogo, setInitialSystemLogo] = useState<string | null>(null);
+    const tabs = useMemo(() => {
+        const availableTabs: { key: SettingsTab; label: string; permission?: Permission }[] = [
+            { key: 'myCompany', label: t('settings.tabs.myCompany') },
+        ];
+        if (hasPermission('MANAGE_USERS')) {
+            availableTabs.push({ key: 'users', label: t('settings.tabs.users') });
+        }
+         if (hasPermission('MANAGE_CATEGORIES')) {
+            availableTabs.push({ key: 'categories', label: t('settings.tabs.categories') });
+        }
+        availableTabs.push({ key: 'integrations', label: t('settings.tabs.integrations') });
 
-
-    type LocalCategory = { id: string; name: string; icon: string; color: string; isNew?: boolean; isDeleting?: boolean; };
-
-    const [localCategories, setLocalCategories] = useState<LocalCategory[]>(() =>
-        Object.entries(appointmentCategoryConfig).map(([name, value], index) => ({
-            id: `initial-cat-${index}`,
-            name,
-            ...value
-        }))
-    );
-    const [isDirty, setIsDirty] = useState(false);
-
-    const availableColors = ['blue', 'green', 'purple', 'yellow', 'pink', 'gray'];
-    const colorClasses: { [key: string]: string } = {
-        blue: 'bg-blue-500',
-        green: 'bg-green-500',
-        purple: 'bg-purple-500',
-        yellow: 'bg-yellow-500',
-        pink: 'bg-pink-500',
-        gray: 'bg-gray-500'
-    };
-
-    const showNotification = (message: string, type: 'success' | 'info' = 'success') => {
-        dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: message, type } });
-    };
-
+        if (hasPermission('MANAGE_ALL_COMPANIES')) {
+             availableTabs.push({ key: 'companies', label: t('settings.tabs.companies') });
+             availableTabs.push({ key: 'plans', label: t('settings.tabs.plans'), permission: 'MANAGE_PLANS' });
+             availableTabs.push({ key: 'permissions', label: t('settings.tabs.permissions'), permission: 'MANAGE_PERMISSIONS' });
+             availableTabs.push({ key: 'systemCustomization', label: t('settings.tabs.systemCustomization'), permission: 'MANAGE_ALL_COMPANIES' });
+        }
+        
+        return availableTabs.filter(tab => !tab.permission || hasPermission(tab.permission));
+    }, [t, hasPermission]);
+    
     useEffect(() => {
-        setCompanyData(company);
-    }, [company]);
-    
-     useEffect(() => {
-        if (activeTab === 'systemCustomization') {
-            const logo = localStorage.getItem('system_logo_url');
-            setSystemLogo(logo);
-            setInitialSystemLogo(logo);
+        if (!tabs.some(t => t.key === initialTab)) {
+            setActiveTab(tabs[0]?.key || 'myCompany');
         }
-    }, [activeTab]);
-
-
-    const handleCompanyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        if (name === 'cnpj') {
-            setCompanyData(prev => ({ ...prev, cnpj: formatCNPJ(value) }));
-        } else {
-            setCompanyData(prev => ({ ...prev, [name]: value }));
-        }
-    };
-
-    const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setCompanyData(prev => ({ ...prev, logoUrl: reader.result as string }));
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const handleCompanySubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        const description = generateCompanyChangesDescription(company, companyData);
-        dispatch({ type: 'UPDATE_COMPANY', payload: { company: companyData, description } });
-        showNotification('Informações da empresa atualizadas com sucesso!');
-    };
-
-    const handleOpenUserModal = (user: User | null = null) => {
-        setEditingUser(user);
-        setIsUserModalOpen(true);
-    };
-
-    const handleSaveUser = (user: User | Omit<User, 'id' | 'permissions'>) => {
-        if ('id' in user && editingUser) {
-            const description = generateUserChangesDescription(editingUser, user);
-            dispatch({ type: 'UPDATE_USER', payload: { user: user as User, description } });
-        } else {
-            dispatch({ type: 'ADD_USER', payload: user as Omit<User, 'id' | 'permissions'> });
-        }
-        showNotification(`Usuário ${'id' in user ? 'atualizado' : 'adicionado'} com sucesso!`);
-        setIsUserModalOpen(false);
-        setEditingUser(null);
-    };
-
-    const handleOpenCompanyModal = (company: Company | null = null) => {
-        setEditingCompany(company);
-        setIsCompanyModalOpen(true);
-    };
-
-    const handleSaveCompany = (companyData: Company | Omit<Company, 'id'>) => {
-        if ('id' in companyData && editingCompany) {
-            const description = generateCompanyChangesDescription(editingCompany, companyData);
-            dispatch({ type: 'UPDATE_COMPANY', payload: { company: companyData, description } });
-        } else {
-            dispatch({ type: 'ADD_COMPANY', payload: companyData as Omit<Company, 'id'> });
-        }
-        showNotification(`Empresa ${'id' in companyData ? 'atualizada' : 'adicionada'} com sucesso!`);
-        setIsCompanyModalOpen(false);
-        setEditingCompany(null);
-    };
-
-    const handleDeleteCompany = (companyId: string) => {
-        if (companyId === 'company-1') {
-            alert("A empresa principal 'Business Hub Pro Inc.' não pode ser removida por segurança.");
-            return;
-        }
-        const companyToDelete = companies.find(c => c.id === companyId);
-        if (companyToDelete && window.confirm(`Tem certeza que deseja deletar a empresa "${companyToDelete.name}"? Todos os dados associados serão removidos.`)) {
-            dispatch({ type: 'DELETE_COMPANY', payload: companyId });
-            showNotification('Empresa removida com sucesso!');
-        }
-    };
-
-    const handleCategoryChange = (id: string, field: 'name' | 'icon' | 'color', value: string) => {
-        setLocalCategories(prevCategories => {
-            setIsDirty(true);
-            return prevCategories.map(cat =>
-                cat.id === id ? { ...cat, [field]: value, isNew: false } : cat
-            );
-        });
-    };
-
-    const handleAddNewCategory = () => {
-        setLocalCategories(prevCategories => {
-            setIsDirty(true);
-            return [
-                ...prevCategories,
-                {
-                    id: `new-cat-${Date.now()}`,
-                    name: 'Nova Categoria',
-                    icon: 'TagIcon',
-                    color: 'gray',
-                    isNew: true
-                }
-            ];
-        });
-    };
-
-    const handleCategoryDelete = (idToDelete: string) => {
-        setLocalCategories(prevCategories => {
-            if (prevCategories.length <= 1) {
-                alert("Deve haver pelo menos uma categoria.");
-                return prevCategories;
-            }
-
-            const categoryName = prevCategories.find(c => c.id === idToDelete)?.name || 'esta categoria';
-
-            if (window.confirm(`Tem certeza que deseja remover a categoria "${categoryName}"?`)) {
-                setIsDirty(true);
-                return prevCategories.filter(cat => cat.id !== idToDelete);
-            }
-
-            return prevCategories;
-        });
-    };
-
-    const handleSaveChangesToCategories = () => {
-        const nameSet = new Set<string>();
-        for (const cat of localCategories) {
-            if (!cat.name.trim()) {
-                alert("O nome da categoria não pode estar vazio.");
-                return;
-            }
-            if (nameSet.has(cat.name.trim())) {
-                alert(`O nome da categoria "${cat.name.trim()}" está duplicado.`);
-                return;
-            }
-            nameSet.add(cat.name.trim());
-        }
-
-        const newConfig = localCategories.reduce((acc, cat) => {
-            acc[cat.name.trim()] = { icon: cat.icon, color: cat.color };
-            return acc;
-        }, {} as { [key: string]: { icon: string; color: string; } });
-
-        dispatch({ type: 'UPDATE_CATEGORY_CONFIG', payload: newConfig });
-
-        setLocalCategories(prev => prev.map(cat => ({ ...cat, name: cat.name.trim() })));
-
-        showNotification('Categorias salvas com sucesso!', 'success');
-        setIsDirty(false);
-    };
-
-    const handleTabClick = (tab: SettingsTab) => {
-        if (activeTab === 'categories' && tab !== 'categories' && isDirty) {
-            if (window.confirm('Você tem alterações não salvas. Deseja descartá-las?')) {
-                setLocalCategories(Object.entries(appointmentCategoryConfig).map(([name, value], index) => ({
-                    id: `initial-cat-${index}`,
-                    name,
-                    ...value,
-                })));
-                setIsDirty(false);
-                setActiveTab(tab);
-            }
-        } else {
-            setActiveTab(tab);
-        }
-    };
-    
-    // --- System Customization Handlers ---
-    const handleSystemLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setSystemLogo(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-    
-    const handleSaveSystemLogo = () => {
-        if (systemLogo) {
-            localStorage.setItem('system_logo_url', systemLogo);
-        } else {
-            localStorage.removeItem('system_logo_url');
-        }
-        setInitialSystemLogo(systemLogo);
-        showNotification(t('notifications.systemLogoUpdated'), 'success');
-    };
-    
-    const handleRemoveSystemLogo = () => {
-        setSystemLogo(null);
-    };
-
-
-    // --- Permission Handlers ---
-    useEffect(() => {
-        if (selectedUserId) {
-            const user = users.find(u => u.id === selectedUserId);
-            if (user) {
-                const currentPermissions = new Set(user.permissions);
-                setUserPermissions(currentPermissions);
-                setInitialPermissions(currentPermissions);
-            }
-        } else {
-            setUserPermissions(new Set());
-            setInitialPermissions(new Set());
-        }
-    }, [selectedUserId, users]);
-
-    const handlePermissionChange = (permission: Permission, isChecked: boolean) => {
-        setUserPermissions(prev => {
-            const newSet = new Set(prev);
-            if (isChecked) {
-                newSet.add(permission);
-            } else {
-                newSet.delete(permission);
-            }
-            return newSet;
-        });
-    };
-
-    const handleSavePermissions = () => {
-        if (!selectedUserId) return;
-        const permissionsArray = Array.from(userPermissions);
-        dispatch({
-            type: 'UPDATE_USER_PERMISSIONS',
-            payload: { userId: selectedUserId, permissions: permissionsArray }
-        });
-        setInitialPermissions(new Set(permissionsArray)); // Update initial state after saving
-        showNotification('Permissões salvas com sucesso!');
-    };
-
-    const areSetsEqual = (a: Set<any>, b: Set<any>) => {
-        if (a.size !== b.size) return false;
-        for (const item of a) {
-            if (!b.has(item)) return false;
-        }
-        return true;
-    };
-
-    const hasPermissionChanges = !areSetsEqual(initialPermissions, userPermissions);
+    }, [tabs, initialTab]);
 
 
     return (
         <div className="p-4 sm:p-8 dark:bg-secondary">
             <Breadcrumbs />
-            <h1 className="text-3xl font-bold text-secondary dark:text-gray-100 mb-6">Configurações</h1>
-
-            <div className="border-b border-gray-200 dark:border-gray-700">
-                <nav className="-mb-px flex space-x-8 overflow-x-auto" aria-label="Tabs">
-                    <button onClick={() => handleTabClick('company')} className={`flex-shrink-0 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'company' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'}`}>
-                        {t('settings.tabs.myCompany')}
-                    </button>
-                    {hasPermission('MANAGE_USERS') && (
-                        <button onClick={() => handleTabClick('users')} className={`flex-shrink-0 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'users' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'}`}>
-                            {t('settings.tabs.users')}
-                        </button>
-                    )}
-                    {hasPermission('MANAGE_CATEGORIES') && (
-                        <button onClick={() => handleTabClick('categories')} className={`flex-shrink-0 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'categories' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'}`}>
-                            {t('settings.tabs.categories')}
-                        </button>
-                    )}
-                    {isSuperAdmin && hasPermission('MANAGE_ALL_COMPANIES') && (
-                        <button onClick={() => handleTabClick('companies')} className={`flex-shrink-0 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'companies' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'}`}>
-                            {t('settings.tabs.companies')}
-                        </button>
-                    )}
-                     {isSuperAdmin && hasPermission('MANAGE_PERMISSIONS') && (
-                        <button onClick={() => handleTabClick('permissions')} className={`flex-shrink-0 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'permissions' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'}`}>
-                           {t('settings.tabs.permissions')}
-                        </button>
-                    )}
-                    {isSuperAdmin && (
-                        <button onClick={() => handleTabClick('systemCustomization')} className={`flex-shrink-0 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'systemCustomization' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200'}`}>
-                           {t('settings.tabs.systemCustomization')}
-                        </button>
-                    )}
+            <h1 className="text-3xl font-bold text-secondary dark:text-gray-100 mb-6">{t('settings.title')}</h1>
+            
+            <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
+                <nav className="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
+                    {tabs.map(tab => <TabButton key={tab.key} label={tab.label} isActive={activeTab === tab.key} onClick={() => setActiveTab(tab.key)} />)}
                 </nav>
             </div>
 
-            {activeTab === 'company' && (
-                <div className="mt-8 bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-md">
-                     <h2 className="text-xl font-bold text-secondary dark:text-gray-100 mb-6">Informações da Empresa</h2>
-                    <form onSubmit={handleCompanySubmit} className="space-y-6 max-w-3xl">
-                        <div className="flex flex-col items-center gap-4 pt-2 pb-6 border-b dark:border-gray-700">
-                            <h3 className="text-lg font-semibold text-secondary dark:text-gray-200">Logo da Empresa</h3>
-                            <UserProfile user={{ name: companyData.name, avatarUrl: companyData.logoUrl }} className="w-24 h-24 rounded-md object-contain" />
-                            {hasPermission('MANAGE_COMPANY_INFO') && (
-                                <>
-                                    <input type="file" id="logo-upload" className="sr-only" onChange={handleLogoChange} accept="image/png, image/jpeg, image/svg+xml" />
-                                    <label htmlFor="logo-upload" className="cursor-pointer bg-white dark:bg-gray-700 py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-                                        Alterar Logo
-                                    </label>
-                                </>
-                            )}
-                        </div>
-                        <fieldset disabled={!hasPermission('MANAGE_COMPANY_INFO')} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome da Empresa</label>
-                                    <input type="text" name="name" id="name" value={companyData.name} onChange={handleCompanyChange} required className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary disabled:bg-gray-100 dark:disabled:bg-gray-700" />
-                                </div>
-                                <div>
-                                    <label htmlFor="cnpj" className="block text-sm font-medium text-gray-700 dark:text-gray-300">CNPJ</label>
-                                    <input type="text" name="cnpj" id="cnpj" value={companyData.cnpj} onChange={handleCompanyChange} required maxLength={18} className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary disabled:bg-gray-100 dark:disabled:bg-gray-700" />
-                                </div>
-                            </div>
-                            <div>
-                                <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Endereço</label>
-                                <input type="text" name="address" id="address" value={companyData.address} onChange={handleCompanyChange} required className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary disabled:bg-gray-100 dark:disabled:bg-gray-700" />
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">E-mail de Contato</label>
-                                    <input type="email" name="email" id="email" value={companyData.email} onChange={handleCompanyChange} required pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$" title="Por favor, insira um endereço de e-mail válido." className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary disabled:bg-gray-100 dark:disabled:bg-gray-700" />
-                                </div>
-                                <div>
-                                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Telefone</label>
-                                    <input type="tel" name="phone" id="phone" value={companyData.phone} onChange={handleCompanyChange} required className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary disabled:bg-gray-100 dark:disabled:bg-gray-700" />
-                                </div>
-                            </div>
-                        </fieldset>
-                         {hasPermission('MANAGE_COMPANY_INFO') && (
-                            <div className="flex justify-end pt-4">
-                                <button type="submit" className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary-hover transition-colors">Salvar Alterações</button>
-                            </div>
-                        )}
-                    </form>
-                </div>
-            )}
-            
-            {activeTab === 'users' && (
-                <div className="mt-8">
-                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold text-secondary dark:text-gray-100">Gerenciamento de Usuários</h2>
-                        <button onClick={() => handleOpenUserModal()} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg shadow-md hover:bg-primary-hover transition-colors">
-                            <PlusIcon className="w-5 h-5" />
-                            Adicionar Usuário
-                        </button>
-                    </div>
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                             <thead className="bg-gray-50 dark:bg-gray-700">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nome</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Permissão</th>
-                                    {isSuperAdmin && <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Empresa</th>}
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Ações</th>
-                                </tr>
-                            </thead>
-                             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                {userUsers.map(user => (
-                                    <tr key={user.id}>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center">
-                                                <UserProfile user={user} className="w-10 h-10 mr-4"/>
-                                                <div>
-                                                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.name}</div>
-                                                    <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{user.role}</td>
-                                        {isSuperAdmin && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{companies.find(c => c.id === user.companyId)?.name}</td>}
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <button onClick={() => handleOpenUserModal(user)} className="text-primary hover:text-primary-hover">
-                                                <EditIcon />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
-             {activeTab === 'companies' && isSuperAdmin && (
-                 <div className="mt-8">
-                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-xl font-bold text-secondary dark:text-gray-100">Gerenciamento de Empresas</h2>
-                        <button onClick={() => handleOpenCompanyModal()} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg shadow-md hover:bg-primary-hover transition-colors">
-                            <PlusIcon className="w-5 h-5" />
-                            Adicionar Empresa
-                        </button>
-                    </div>
-                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                             <thead className="bg-gray-50 dark:bg-gray-700">
-                                <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nome da Empresa</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">CNPJ</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Ações</th>
-                                </tr>
-                            </thead>
-                             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                {companies.map(comp => (
-                                    <tr key={comp.id}>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{comp.name}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{comp.cnpj}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                             <div className="flex items-center gap-4">
-                                                <button onClick={() => handleOpenCompanyModal(comp)} className="text-primary hover:text-primary-hover"><EditIcon /></button>
-                                                <button onClick={() => handleDeleteCompany(comp.id)} className="text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400"><TrashIcon /></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
-            {activeTab === 'categories' && (
-                <div className="mt-8 bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-md">
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
-                        <h2 className="text-xl font-bold text-secondary dark:text-gray-100">Categorias de Compromissos</h2>
-                        <div className="flex items-center gap-4">
-                             {isDirty && (
-                                <button onClick={handleSaveChangesToCategories} className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
-                                    Salvar Alterações
-                                </button>
-                            )}
-                            <button onClick={handleAddNewCategory} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg shadow-md hover:bg-primary-hover transition-colors">
-                                <PlusIcon className="w-5 h-5" />
-                                Nova Categoria
-                            </button>
-                        </div>
-                    </div>
-                    <div className="space-y-4">
-                        {localCategories.map(cat => {
-                            const IconComponent = iconMap[cat.icon] || null;
-                            return (
-                                <div key={cat.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg animate-fade-in-up">
-                                    <div className="md:col-span-1 flex items-center justify-center">
-                                         {IconComponent && <IconComponent className="w-6 h-6 text-gray-600 dark:text-gray-300" />}
-                                    </div>
-                                    <div className="md:col-span-4">
-                                        <input
-                                            type="text"
-                                            value={cat.name}
-                                            onChange={(e) => handleCategoryChange(cat.id, 'name', e.target.value)}
-                                            className="w-full border-gray-300 dark:border-gray-600 rounded-md p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary"
-                                        />
-                                    </div>
-                                    <div className="md:col-span-4">
-                                        <IconPicker value={cat.icon} onChange={(iconName) => handleCategoryChange(cat.id, 'icon', iconName)} />
-                                    </div>
-                                     <div className="md:col-span-2 flex items-center justify-center gap-2">
-                                        {availableColors.map(color => (
-                                            <button
-                                                key={color}
-                                                type="button"
-                                                onClick={() => handleCategoryChange(cat.id, 'color', color)}
-                                                className={`w-6 h-6 rounded-full transition-transform duration-150 ${colorClasses[color]} ${cat.color === color ? 'ring-2 ring-offset-2 dark:ring-offset-gray-800 ring-primary' : ''}`}
-                                                aria-label={`Selecionar cor ${color}`}
-                                            />
-                                        ))}
-                                    </div>
-                                    <div className="md:col-span-1 flex justify-end">
-                                        <button onClick={() => handleCategoryDelete(cat.id)} className="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/40">
-                                            <TrashIcon className="w-5 h-5" />
-                                        </button>
-                                    </div>
-                                </div>
-                            )
-                        })}
-                    </div>
-                </div>
-            )}
-             {activeTab === 'permissions' && isSuperAdmin && (
-                <div className="mt-8 bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-md">
-                     <h2 className="text-xl font-bold text-secondary dark:text-gray-100 mb-6">Permissões Detalhadas por Usuário</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        {/* User List */}
-                        <div className="md:col-span-1">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Selecione um Usuário</label>
-                            <ul className="space-y-1 max-h-96 overflow-y-auto border dark:border-gray-700 rounded-md p-2">
-                                {users.filter(user => user.id !== currentUser.id).map(user => (
-                                    <li key={user.id}>
-                                        <button
-                                            onClick={() => setSelectedUserId(user.id)}
-                                            className={`w-full text-left p-2 rounded-md transition-colors ${selectedUserId === user.id ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                                        >
-                                            {user.name}
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                        {/* Permission List */}
-                        <div className="md:col-span-2">
-                             {selectedUserId ? (
-                                <div>
-                                    <h3 className="font-semibold text-lg text-secondary dark:text-gray-200 mb-4">Editando permissões para: {users.find(u => u.id === selectedUserId)?.name}</h3>
-                                    <div className="space-y-6 max-h-[28rem] overflow-y-auto pr-2">
-                                        {permissionGroups.map(group => {
-                                            const manageablePermissionsInGroup = group.permissions.filter(p => USER_MANAGEABLE_PERMISSIONS.includes(p as Permission));
-                                            if (manageablePermissionsInGroup.length === 0) return null;
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                {activeTab === 'myCompany' && <MyCompanyTab onEdit={() => setIsCompanyFormOpen(true)} />}
+                {activeTab === 'users' && <UsersTab />}
+                {activeTab === 'categories' && hasPermission('MANAGE_CATEGORIES') && <CategoriesTab />}
+                {activeTab === 'integrations' && <IntegrationsTab />}
+                {activeTab === 'companies' && hasPermission('MANAGE_ALL_COMPANIES') && <CompaniesManagementTab />}
+                {activeTab === 'permissions' && hasPermission('MANAGE_PERMISSIONS') && <PermissionsTab />}
+                {activeTab === 'plans' && hasPermission('MANAGE_PLANS') && <PlansTab />}
+                {activeTab === 'systemCustomization' && hasPermission('MANAGE_ALL_COMPANIES') && <SystemCustomizationTab />}
+            </div>
 
-                                            return (
-                                                <div key={group.title}>
-                                                    <h4 className="text-md font-semibold text-secondary dark:text-gray-300 border-b dark:border-gray-600 pb-2 mb-3">{group.title}</h4>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
-                                                        {manageablePermissionsInGroup.map(permission => (
-                                                            <label key={permission} className="flex items-center gap-3 p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={userPermissions.has(permission as Permission)}
-                                                                    onChange={(e) => handlePermissionChange(permission as Permission, e.target.checked)}
-                                                                    className="h-4 w-4 rounded border-gray-300 dark:border-gray-500 text-primary focus:ring-primary bg-gray-100 dark:bg-gray-900"
-                                                                />
-                                                                <span className="text-sm text-gray-700 dark:text-gray-300">{permissionDescriptions[permission as Permission]}</span>
-                                                            </label>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                    <div className="mt-6 flex justify-end">
-                                        <button 
-                                          onClick={handleSavePermissions} 
-                                          disabled={!hasPermissionChanges}
-                                          className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary-hover transition-colors disabled:bg-primary/50 disabled:cursor-not-allowed"
-                                        >
-                                            Salvar Permissões
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
-                                    <p>Selecione um usuário para ver e editar suas permissões.</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-            
-            {activeTab === 'systemCustomization' && isSuperAdmin && (
-                <div className="mt-8 bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg shadow-md">
-                    <h2 className="text-xl font-bold text-secondary dark:text-gray-100 mb-2">{t('settings.customization.title')}</h2>
-                    <p className="text-medium dark:text-gray-400 mb-6">{t('settings.customization.logoDescription')}</p>
-
-                    <div className="pt-6 border-t dark:border-gray-700">
-                        <h3 className="text-lg font-semibold text-secondary dark:text-gray-200">{t('settings.customization.logoTitle')}</h3>
-                        <div className="mt-4 flex flex-col sm:flex-row items-center gap-6">
-                            <div className="w-48 h-24 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-md p-2">
-                                {systemLogo ? (
-                                    <img src={systemLogo} alt="Pré-visualização do Logo" className="max-w-full max-h-full object-contain" />
-                                ) : (
-                                    <span className="text-gray-500 text-sm text-center">{t('app.title.full')}</span>
-                                )}
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <input type="file" id="system-logo-upload" className="sr-only" onChange={handleSystemLogoFileChange} accept="image/png, image/jpeg, image/svg+xml" />
-                                <label htmlFor="system-logo-upload" className="cursor-pointer bg-white dark:bg-gray-700 py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">
-                                    {t('settings.customization.changeLogo')}
-                                </label>
-                                {systemLogo && (
-                                    <button onClick={handleRemoveSystemLogo} className="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-red-700 bg-red-100 hover:bg-red-200 dark:bg-red-900/40 dark:text-red-300 dark:hover:bg-red-900/60">
-                                        {t('settings.customization.removeLogo')}
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                        <div className="flex justify-end pt-6 mt-6 border-t dark:border-gray-700">
-                            <button
-                                onClick={handleSaveSystemLogo}
-                                disabled={systemLogo === initialSystemLogo}
-                                className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary-hover transition-colors disabled:bg-primary/50 disabled:cursor-not-allowed">
-                                {t('common.saveChanges')}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-
-            <Modal isOpen={isUserModalOpen} onClose={() => setIsUserModalOpen(false)} title={editingUser ? 'Editar Usuário' : 'Adicionar Usuário'}>
-                <UserForm user={editingUser} onSave={handleSaveUser} onCancel={() => setIsUserModalOpen(false)} isSuperAdmin={isSuperAdmin} allCompanies={companies} currentUser={currentUser} />
-            </Modal>
-             <Modal isOpen={isCompanyModalOpen} onClose={() => setIsCompanyModalOpen(false)} title={editingCompany ? 'Editar Empresa' : 'Adicionar Empresa'}>
-                <CompanyForm company={editingCompany} onSave={handleSaveCompany} onCancel={() => setIsCompanyModalOpen(false)} />
-            </Modal>
+            {isCompanyFormOpen && <CompanyManagementFormModal isOpen={isCompanyFormOpen} onClose={() => setIsCompanyFormOpen(false)} onSave={handleSaveCompany} company={state.companies.find(c => c.id === state.currentUser?.companyId) || null} plans={state.plans} />}
         </div>
     );
 };

@@ -6,7 +6,7 @@ import { useLocalization } from '../../contexts/LocalizationContext';
 // Defined outside the component to ensure it's a stable, pure function.
 const getTranslatedIconName = (t: (key: string, params?: { [key: string]: string | number; } | undefined) => string, iconName: string): string => {
     const key = `icons.${iconName}`;
-    const translated = t(key);
+    const translated = t(key, { defaultValue: iconName });
     // The t function returns the key if not found, so we check that
     return translated === key ? iconName : translated;
 };
@@ -71,7 +71,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({ value, onChange }) => {
                                 type="button"
                                 onClick={() => handleSelect(name)}
                                 className={`flex items-center justify-center p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary transition-colors ${value === name ? 'bg-primary/10 text-primary' : ''}`}
-                                aria-label={`Selecionar ícone ${getTranslatedIconName(t, name)}`}
+                                aria-label={getTranslatedIconName(t, name)}
                                 title={getTranslatedIconName(t, name)}
                             >
                                 <IconComponent className="w-6 h-6" />

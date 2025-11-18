@@ -69,17 +69,18 @@ describe('Customer Management Flow', () => {
     cy.contains('h1', 'Clientes').should('be.visible');
 
     // 2. Click the button to add a new customer
-    cy.contains('Adicionar Cliente').click();
+    cy.get('button[aria-label="Adicionar Cliente"]').click();
 
     // 3. Fill out the form
-    cy.get('input[name="name"]').type('Nova Empresa de Teste E2E');
-    cy.get('input[name="email"]').type('contato@teste-e2e.com');
-    cy.get('select[name="type"]').select('Company');
-    cy.get('input[name="identifier"]').type('11444777000161'); // Valid CNPJ
-    cy.get('input[name="phone"]').type('99 1234 5678');
+    cy.contains('Adicionar Novo Cliente').should('be.visible');
+    cy.get('input[value="New Tech Corp"]').type('Nova Empresa de Teste E2E'); // This is a bit brittle, relies on form state
+    cy.get('input[value="contact@newtech.com"]').type('contato@teste-e2e.com');
+    cy.get('select').select('Company');
+    cy.get('input[value="11.444.777/0001-61"]').type('11444777000161'); // Valid CNPJ
+    cy.get('input[value="11999998888"]').type('99 1234 5678');
     
     // 4. Submit the form
-    cy.get('button[type="submit"]').click();
+    cy.contains('button', 'Adicionar Cliente').click();
 
     // 5. Verify the new customer is now in the list
     cy.contains('Nova Empresa de Teste E2E').should('be.visible');
@@ -94,8 +95,9 @@ describe('Customer Management Flow', () => {
     cy.contains('tr', 'Global Imports').find('button[title="Editar"]').click();
 
     // 3. Change the phone number in the modal
-    cy.get('input[name="phone"]').clear();
-    cy.get('input[name="phone"]').type('(99) 99999-9999');
+    cy.contains('Editar Cliente').should('be.visible');
+    cy.get('input[value="(11) 5555-1111"]').clear();
+    cy.get('input[placeholder*="Telefone"]').type('(99) 99999-9999');
 
     // 4. Save the changes
     cy.contains('button', 'Salvar Alterações').click();
@@ -106,4 +108,4 @@ describe('Customer Management Flow', () => {
   });
 
 });
-})();
+})()

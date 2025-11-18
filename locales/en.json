@@ -12,6 +12,7 @@
     "suppliers": "Suppliers",
     "agenda": "Agenda",
     "reports": "Reports",
+    "whatsapp": "WhatsApp Sender",
     "settings": "Settings",
     "help": "Help"
   },
@@ -27,7 +28,10 @@
       "suppliers": "Suppliers",
       "appointments": "Appointments",
       "noResults": "No results found."
-    }
+    },
+    "trialBanner": "You have {{days}} days left in your trial period.",
+    "pastDueBanner": "Your account is past due. Please update your payment information.",
+    "trialExpiredBanner": "Your trial period has expired."
   },
   "login": {
     "welcome": "Welcome back! Access your account.",
@@ -37,12 +41,30 @@
     "passwordPlaceholder": "••••••",
     "rememberMe": "Remember me",
     "forgotPassword": "Forgot your password?",
+    "firstTimeOrForgot": "First time? / Forgot password?",
     "signIn": "Sign In",
     "signingIn": "Signing In...",
     "continueWith": "Or continue with",
     "errors": {
-      "invalidCredentials": "Invalid email or password. Test accounts: (Super Admin) ddarruspe@gmail.com / 1906 | (User) alice@businesshub.com / password"
+      "invalidCredentials": "Invalid email or password.",
+      "pendingAccount": "Your account is pending setup. Please use the 'Forgot Password' link to set your password."
     }
+  },
+  "resetPassword": {
+    "title": "Set/Reset Password",
+    "instructions": "Enter your email address. We'll send you a link to reset your password.",
+    "continue": "Continue",
+    "sendLink": "Send Reset Link",
+    "emailNotFound": "No account found with that email address.",
+    "setNewPasswordTitle": "Set a New Password",
+    "password": "New Password",
+    "confirmPassword": "Confirm New Password",
+    "passwordMismatch": "Passwords do not match.",
+    "passwordTooShort": "Password must be at least 6 characters long.",
+    "savePassword": "Save Password",
+    "success": "Password successfully updated! You can now log in.",
+    "successLinkSent": "If an account exists for this email, a password reset link has been sent.",
+    "backToLogin": "Back to Login"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -59,14 +81,13 @@
       "title": "Next 5 Appointments",
       "none": "No upcoming appointments."
     },
-    "calendar": {
-      "title": "Monthly Calendar",
-      "viewAppointmentsFor": "View appointments for {{date}}",
-      "weekdays": ["S", "M", "T", "W", "T", "F", "S"]
-    },
     "recentActivity": {
       "title": "Recent Activity",
       "summary": "A summary of recent activity will be displayed here."
+    },
+    "calendar": {
+      "viewAppointmentsFor": "View appointments for {{date}}",
+      "selectYear": "Select year"
     }
   },
   "customers": {
@@ -80,12 +101,25 @@
     "status": "Status",
     "customerSince": "Customer Since",
     "actions": "Actions",
+    "filters": {
+      "all": "All Statuses",
+      "status": "Status",
+      "sort_by": "Sort by",
+      "sort_options": {
+        "date_newest": "Date (Newest)",
+        "date_oldest": "Date (Oldest)",
+        "name_asc": "Name (A-Z)",
+        "name_desc": "Name (Z-A)",
+        "status": "Status"
+      }
+    },
     "noCustomersFound": "No customers found.",
     "statusActive": "Active",
     "statusInactive": "Inactive",
     "typePerson": "Individual",
     "typeCompany": "Company",
     "details": "Details of {{name}}",
+    "fetchError": "Failed to fetch customers.",
     "confirmDelete": {
       "title": "Confirm Deletion",
       "header": "Delete Customer",
@@ -104,37 +138,48 @@
       "companyName": "Company Name",
       "email": "Email",
       "type": "Type",
-      "cnpj": "CNPJ",
-      "cpf": "CPF",
+      "cnpj": "Tax ID",
+      "cpf": "Tax ID",
       "phone": "Phone",
       "cep": "Postal Code",
       "address": "Address",
       "status": "Status",
+      "province": "Province",
       "companyLogo": "Company Logo",
       "uploadLogo": "Upload Logo",
       "logoHint": "If no logo is uploaded, the company's initials will be used.",
       "avatar": "Avatar",
       "changeAvatar": "Change Avatar",
       "errors": {
-        "invalidCpf": "Invalid CPF. Please check the entered number.",
-        "invalidCnpj": "Invalid CNPJ. Please check the entered number."
+        "invalidCpf": "Invalid Tax ID. Please check the number.",
+        "invalidCnpj": "Invalid Tax ID. Please check the number.",
+        "invalidDni": "Invalid DNI. Please check the number.",
+        "invalidCuit": "Invalid CUIT. Please check the number.",
+        "cepNotFound": "Postal code not found.",
+        "cepError": "Error fetching address for the postal code.",
+        "invalidCpa": "Invalid CPA (Argentine Postal Code)."
       }
     },
     "detailsView": {
       "tabs": {
         "details": "Details",
-        "interactions": "Interactions"
+        "interactions": "Interactions",
+        "documents": "Documents"
       },
-      "nameLabel": "Name:",
-      "emailLabel": "Email:",
-      "phoneLabel": "Phone:",
-      "typeLabel": "Type:",
-      "cnpjLabel": "CNPJ:",
-      "cpfLabel": "CPF:",
-      "statusLabel": "Status:",
-      "sinceLabel": "Customer Since:",
-      "cepLabel": "Postal Code:",
-      "addressLabel": "Address:",
+      "aiAnalysisTitle": "AI-Powered Strategic Analysis for {{name}}",
+      "aiAnalysisDescription": "Get an instant summary of this customer's engagement, key interests, and suggested next steps based on their entire history of interactions and appointments.",
+      "summaryCards": {
+        "totalAppointments": "Total Appointments",
+        "upcomingAppointments": "Upcoming Appointments",
+        "lastInteraction": "Last Interaction"
+      },
+      "appointments": {
+        "title": "Appointments",
+        "upcoming": "Upcoming Appointments",
+        "past": "Past",
+        "none": "No appointments found.",
+        "viewInAgenda": "View in Agenda"
+      },
       "addInteraction": {
         "title": "Log New Interaction",
         "placeholder": "Describe the interaction here...",
@@ -146,7 +191,16 @@
           "note": "Note"
         }
       },
-      "noInteractions": "No interactions logged."
+      "noInteractions": "No interactions logged.",
+      "documents": {
+        "title": "Customer Documents",
+        "upload": "Upload Document",
+        "noDocuments": "No documents uploaded.",
+        "confirmDelete": {
+          "title": "Confirm Document Deletion",
+          "body": "Are you sure you want to delete the document <strong>{{name}}</strong>?"
+        }
+      }
     }
   },
   "suppliers": {
@@ -177,21 +231,38 @@
       "uploadLogo": "Upload Logo",
       "logoHint": "If no logo is uploaded, the initials will be used.",
       "companyName": "Company Name",
-      "cnpj": "CNPJ",
+      "cnpj": "Tax ID",
+      "cuit": "CUIT",
+      "cep": "Postal Code",
+      "address": "Address",
+      "province": "Province",
+      "contactInfo": "Contact Information",
       "contactPerson": "Contact Person",
-      "contactAvatar": "Contact Avatar",
+      "contactAvatar": "Contact's Avatar",
       "changeAvatar": "Change Avatar",
       "fullName": "Full Name",
       "email": "Email",
       "phone": "Phone",
-      "services": "Services (comma separated)"
+      "services": "Services (comma separated)",
+      "errors": {
+        "invalidCnpj": "Invalid Tax ID. Please check the number.",
+        "invalidCuit": "Invalid CUIT. Please check the number.",
+        "cnpjNotFound": "Tax ID not found.",
+        "cnpjError": "Error fetching Tax ID data.",
+        "cepNotFound": "Postal code not found.",
+        "cepError": "Error fetching address for the postal code.",
+        "invalidCpa": "Invalid CPA (Argentine Postal Code)."
+      }
     }
   },
   "agenda": {
     "title": "Agenda",
     "add": "New Appointment",
     "edit": "Edit Appointment",
+    "viewCompleted": "View Completed",
     "allAppointments": "All Appointments",
+    "more": "more",
+    "noAppointmentsInCategory": "No appointments in this category.",
     "views": {
       "board": "Board",
       "list": "List",
@@ -218,7 +289,7 @@
       "title": "Details",
       "history": "History",
       "noDescription": "No description provided.",
-      "dateTime": "Date and Time:",
+      "dateTime": "Date & Time:",
       "location": "Location:",
       "notSpecified": "Not specified",
       "dueDate": "Due Date:",
@@ -226,13 +297,23 @@
       "attachments": "Attachments:",
       "reopen": "Reopen",
       "aiSummary": "AI Summary",
-      "edit": "Edit"
+      "edit": "Edit",
+      "modifiedBy": "Modified by",
+      "previousData": "Previous data",
+      "subtasks": "Subtasks",
+      "subtaskProgress": "Subtask Progress",
+      "deleteSubtask": "Delete subtask",
+      "confirmDeleteSubtask": {
+        "title": "Delete Subtask",
+        "body": "Are you sure you want to delete the subtask '<strong>{{name}}</strong>'? This action cannot be undone."
+      },
+      "addSubtaskPlaceholder": "Add new subtask..."
     },
     "form": {
       "generalInfo": "General Information",
       "title": "Title",
       "description": "Description",
-      "dateAndTime": "Date and Time",
+      "dateAndTime": "Date & Time",
       "start": "Start",
       "end": "End",
       "dueDate": "Due Date (Optional)",
@@ -243,7 +324,7 @@
         "daily": "Daily",
         "weekly": "Weekly",
         "monthly": "Monthly",
-        "yearly": "Annually"
+        "yearly": "Yearly"
       },
       "detailsAndAssociations": "Details & Associations",
       "location": "Location",
@@ -267,11 +348,14 @@
       "attachments": "Attachments",
       "addFiles": "Add Files",
       "notify": "Notify participants by email",
+      "noParticipants": "No participants added.",
+      "addParticipant": "Add Participant",
+      "noUsersFound": "No users found.",
       "errors": {
-        "general": "Please fill in the title, start, and end dates.",
+        "general": "Please fill in the title, start date, and end date.",
         "invalidDate": "The start or end date/time is invalid.",
-        "endBeforeStart": "End date must be after start date.",
-        "dueAfterStart": "Due date must be after start date.",
+        "endBeforeStart": "End date must be after the start date.",
+        "dueAfterStart": "Due date must be after the start date.",
         "recurrenceEnd": "Please set an end date for the recurrence."
       }
     },
@@ -282,7 +366,67 @@
       "noCompleted": "No completed appointments found."
     },
     "summary": {
-      "title": "Summary of {{title}}"
+      "title": "Summary of {{title}}",
+      "error": "Failed to generate summary. An error occurred with the AI service."
+    }
+  },
+  "reports": {
+    "title": "Reports & Exports",
+    "exportPDF": "Export PDF",
+    "exportExcel": "Export Excel",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "tabs": {
+      "appointments": "Appointments",
+      "customers": "Customers",
+      "suppliers": "Suppliers",
+      "activity": "Activity Log"
+    },
+    "appointments": {
+      "title": "Appointments Report",
+      "fileName": "Appointments_Report",
+      "table": {
+        "title": "Title",
+        "dateTime": "Date & Time",
+        "dueDate": "Due Date",
+        "location": "Location",
+        "participants": "Participants"
+      }
+    },
+    "customers": {
+      "title": "Customers Report",
+      "fileName": "Customers_Report",
+      "statusChartTitle": "Customer Status",
+      "listTitle": "Customer List",
+      "table": {
+        "name": "Name",
+        "status": "Status",
+        "email": "Email",
+        "phone": "Phone",
+        "type": "Type"
+      }
+    },
+    "suppliers": {
+      "title": "Suppliers by Category Report",
+      "fileName": "Suppliers_Report",
+      "table": {
+        "category": "Category",
+        "supplier": "Supplier",
+        "contact": "Contact",
+        "email": "Email",
+        "cnpj": "Tax ID"
+      }
+    },
+    "activity": {
+      "title": "Activity Log",
+      "fileName": "Activity_Log",
+      "type": "Activity Type",
+      "allTypes": "All Types",
+      "table": {
+        "date": "Date",
+        "type": "Type",
+        "description": "Description"
+      }
     }
   },
   "settings": {
@@ -292,28 +436,51 @@
       "users": "Users",
       "categories": "Categories",
       "companies": "Companies",
+      "plans": "Plans",
       "permissions": "Permissions",
-      "systemCustomization": "Customization"
+      "systemCustomization": "Customization",
+      "integrations": "Integrations"
+    },
+    "integrations": {
+      "title": "Integrations",
+      "description": "Configure integrations with third-party services here.",
+      "whatsApp": {
+        "phoneId": "WhatsApp Phone Number ID",
+        "token": "WhatsApp Access Token"
+      },
+      "savedSuccess": "Integration settings saved successfully!"
     },
     "customization": {
       "title": "System Customization",
       "logoTitle": "System Logo (Login Screen)",
       "logoDescription": "This logo will appear on the login screen for all users.",
       "changeLogo": "Change Logo",
-      "removeLogo": "Remove Logo"
+      "removeLogo": "Remove Logo",
+      "noLogo": "No logo set"
     },
     "company": {
       "title": "Company Information",
+      "editTitle": "Edit Company Information",
+      "editButton": "Edit",
+      "logo": "Company Logo",
       "name": "Company Name",
-      "cnpj": "CNPJ",
+      "cnpj": "Tax ID",
       "address": "Address",
       "contactEmail": "Contact Email",
-      "phone": "Phone"
+      "phone": "Phone",
+      "changeLogo": "Change Logo",
+      "errors": {
+        "invalidFormat": "Invalid file format. Use JPG, PNG, or SVG.",
+        "fileTooLarge": "File is too large. Limit is {{limit}}MB.",
+        "uploadFailed": "An error occurred while reading the file."
+      }
     },
     "users": {
       "title": "User Management",
       "add": "Add User",
       "edit": "Edit User",
+      "addNew": "Add New User",
+      "sendPasswordReset": "Send password reset",
       "table": {
         "name": "Name",
         "role": "Role",
@@ -326,33 +493,93 @@
         "role": "Role",
         "company": "Company",
         "selectCompany": "Select a company",
+        "avatar": "Change Avatar",
         "roles": {
           "admin": "Administrator",
           "manager": "Manager",
           "collaborator": "Collaborator"
+        },
+        "errors": {
+          "selectCompany": "Please select a company for the new user."
         }
       }
     },
     "companies": {
       "title": "Company Management",
+      "searchPlaceholder": "Search by name or Tax ID...",
       "add": "Add Company",
       "edit": "Edit Company",
+      "detailsTab": "Details",
+      "historyTab": "History",
+      "reasonForChange": "Reason for Change (Required)",
+      "noHistory": "No status changes have been logged for this company.",
+      "historyTable": {
+        "date": "Date",
+        "changedBy": "Changed By",
+        "newStatus": "Change",
+        "reason": "Reason"
+      },
+      "history": {
+        "changedStatus": "changed status from <strong>{{old}}</strong> to <strong>{{new}}</strong>."
+      },
       "table": {
         "name": "Company Name",
-        "cnpj": "CNPJ",
-        "actions": "Actions"
+        "cnpj": "Tax ID",
+        "actions": "Actions",
+        "status": "Status",
+        "trialEnds": "Trial Ends"
       },
-      "deleteWarning": "The main company 'Business Hub Pro Inc.' cannot be removed for security reasons.",
-      "confirmDelete": "Are you sure you want to delete the company \"{{name}}\"? All associated data will be removed."
+      "enableTrial": "Enable trial period?",
+      "trialDuration": "Trial Duration (days)",
+      "adminInfo": "Administrator Information",
+      "deleteWarning": "The main company 'Business Hub Pro Inc.' cannot be removed for safety.",
+      "confirmDeleteTitle": "Confirm Company Deletion",
+      "confirmDelete": "Are you sure you want to delete the company \"{{name}}\"? All associated data (users, customers, etc.) will be permanently removed."
+    },
+    "plans": {
+      "title": "Plan Management",
+      "add": "Add Plan",
+      "edit": "Edit Plan",
+      "addNew": "Add New Plan",
+      "currentPlan": "Current Plan",
+      "perMonth": "/month",
+      "userLimit": "{{count}} Users",
+      "customerLimit": "{{count}} Customers",
+      "noPlansTitle": "No plans created yet",
+      "noPlansDescription": "Get started by creating your first subscription plan.",
+      "createFirstPlan": "Create First Plan",
+      "form": {
+        "name": "Plan Name",
+        "price": "Price (monthly)",
+        "userLimit": "User Limit",
+        "customerLimit": "Customer Limit",
+        "hasWhatsApp": "Enable WhatsApp Module",
+        "hasAI": "Enable AI Features",
+        "allowBranding": "Allow Brand Customization"
+      },
+      "features": {
+        "whatsApp": "WhatsApp Module",
+        "ai": "AI Features",
+        "branding": "Brand Customization (Logo)"
+      },
+      "confirmDeleteTitle": "Confirm Plan Deletion",
+      "confirmDeleteBody": "Are you sure you want to delete the plan '{{name}}'?",
+      "deleteBlockedTitle": "Deletion Blocked",
+      "deleteBlockedBody": "This plan cannot be deleted as it is assigned to the following companies: {{companies}}."
     },
     "categories": {
       "title": "Appointment Categories",
+      "save": "Save Changes",
       "new": "New Category",
       "deleteWarning": "There must be at least one category.",
       "confirmDelete": "Are you sure you want to remove the category \"{{name}}\"?.",
       "errors": {
         "emptyName": "Category name cannot be empty.",
-        "duplicateName": "The category name \"{{name}}\" is duplicated."
+        "duplicateName": "Category name \"{{name}}\" is duplicated."
+      },
+      "tooltips": {
+        "cannotEditName": "Default category names cannot be changed as they are used for system translations.",
+        "cannotDelete": "Default categories cannot be deleted."
       }
     },
     "permissions": {
@@ -360,6 +587,7 @@
       "selectUser": "Select a User",
       "editingFor": "Editing permissions for: {{name}}",
       "selectUserPrompt": "Select a user to view and edit their permissions.",
+      "save": "Save Permissions",
       "groups": {
         "dashboard": "Dashboard",
         "customers": "Customers",
@@ -367,7 +595,7 @@
         "agenda": "Agenda",
         "reports": "Reports",
         "settings": "Settings",
-        "superAdmin": "Super Administration"
+        "superAdmin": "General Administration"
       },
       "descriptions": {
         "VIEW_DASHBOARD": "View dashboard",
@@ -384,17 +612,57 @@
         "MANAGE_COMPANY_INFO": "Edit own company info",
         "MANAGE_USERS": "Manage users in own company",
         "MANAGE_CATEGORIES": "Manage appointment categories",
-        "MANAGE_ALL_USERS": "Manage users from ANY company"
+        "MANAGE_ALL_USERS": "Manage users in ANY company",
+        "MANAGE_PLANS": "Manage subscription plans"
       }
     }
   },
   "help": {
     "title": "Help Center",
-    "intro": "Welcome! Here you will find guides on how to use the Business Hub features.",
-    "downloadManual": "Download PDF Manual"
+    "intro": "Welcome! Here you'll find guides on how to use the features of Business Hub.",
+    "downloadManual": "Download PDF Manual",
+    "manualFilename": "Manual_BusinessHubPro.pdf",
+    "sections": {
+      "dashboard": {
+        "title": "Main Dashboard",
+        "content": "<p>The Dashboard is your home screen, designed to provide a quick overview of your business's most important information.</p><h4>Key Components:</h4><ul><li><strong>Stat Cards:</strong> At the top, you'll see key numbers like total active customers, suppliers, and your upcoming appointments. These cards serve as a daily pulse check on your operation.</li><li><strong>New Customers Chart:</strong> This chart shows the growth of your customer base over the past few months, allowing you to identify acquisition trends.</li><li><strong>Upcoming Appointments List:</strong> A quick summary of your next scheduled events for the day, ensuring you never miss an important meeting.</li></ul>"
+      },
+      "customers": {
+        "title": "Managing Customers",
+        "content": "<h4>Viewing the Customer List</h4><p>On this screen, you'll see a table with all your customers. Use the search bar at the top to find a specific customer by name.</p><h4>Adding a New Customer</h4><ol><li>Click the blue <strong>\\\"+ Add Customer\\\"</strong> button in the top right corner.</li><li>Fill out the form. The system automatically validates the DNI/CUIT to ensure data integrity.</li><li>For individual customers, you can choose a predefined avatar or upload a photo.</li><li>After filling it out, click \\\"Add Customer\\\" to save.</li></ol><h4>Viewing Details and Interactions</h4><ul><li>Click on any customer in the list to open a window with their complete details.</li><li>Navigate to the \\\"Interactions\\\" tab to see the entire history of contacts, such as calls, emails, and meetings.</li><li>You can log a new interaction directly on this tab.</li></ul><h4>AI Analysis</h4><p>On the interactions tab, if there's a history of contacts, you can use the <strong>\\\"Analyze with AI\\\"</strong> button. The artificial intelligence will read the interactions and generate a strategic summary, identifying customer sentiment, business opportunities, and suggesting next steps.</p>"
+      },
+      "suppliers": {
+        "title": "Managing Suppliers",
+        "content": "<p>Supplier management is centralized on this screen, working very similarly to customer management. You can register partners, contact information, and the services they provide.</p><ul><li>Use the <strong>\\\"+ Add Supplier\\\"</strong> button to register a new partner.</li><li>Fill in the company data as well as the information for the main contact person.</li><li>You can view, edit, or remove a supplier using the icons in the list.</li></ul>"
+      },
+      "agenda": {
+        "title": "Using the Agenda",
+        "content": "<h4>Agenda Views</h4><p>The agenda offers multiple ways to view your appointments. Use the buttons in the top right corner to switch between views:</p><ul><li><strong>Board (Kanban):</strong> Ideal for weekly planning. Organize appointments into columns like \\\"Today\\\", \\\"Tomorrow\\\", and \\\"Next 7 Days\\\". Drag and drop cards to reschedule appointments intuitively.</li><li><strong>List:</strong> A chronological view of all your future appointments.</li><li><strong>Month, Week, Day:</strong> Classic calendar views for short and long-term planning.</li></ul><h4>Creating and Managing Appointments</h4><ol><li>Click the <strong>\\\"+ New Appointment\\\"</strong> button.</li><li>Fill in details like title, description, start and end date/time.</li><li>Associate appointments with customers or suppliers to maintain an integrated history.</li><li>Attach important files and set up recurrences for regular events (daily, weekly, etc.).</li><li>Mark an appointment as completed directly on the board or in the list.</li><li><strong>Add subtasks</strong> to detail activities. Mark them as complete and track progress with visual indicators on the board and a progress bar in the detail view.</li></ol><h4>History and AI Summary</h4><p>Access the \\\"History\\\" to see all completed appointments. For any appointment in the history, click <strong>\\\"AI Summary\\\"</strong>. The system will generate a professional summary of the meeting, ideal for minutes and follow-ups.</p>"
+      },
+      "reports": {
+        "title": "Reports and Exports",
+        "content": "<p>This section allows you to view consolidated data and export it for use in other tools or for presentations.</p><ul><li><strong>Navigate Tabs:</strong> Choose between reports for Appointments, Customers, Suppliers, or Activity Log.</li><li><strong>Filter Data:</strong> In each report, you can use filters, such as date ranges, to focus on the data that matters most.</li><li><strong>Export to PDF or Excel:</strong> For each report, you will find buttons to \\\"Export PDF\\\" (great for printing and sharing) and \\\"Export Excel\\\" (ideal if you need to manipulate the data in spreadsheets).</li></ul>"
+      },
+      "settings": {
+        "title": "Settings",
+        "content": "<p>Customize the system to meet the needs of your team and company.</p><ul><li><strong>My Company:</strong> Update your company's registration details, such as address, phone, and Tax ID.</li><li><strong>Users:</strong> Add new team members to the system, edit their information, and set their permissions (Administrator, Manager, Collaborator).</li><li><strong>Categories:</strong> Customize appointment categories. You can rename, change icons and colors to better suit your organization.</li><li><strong>Companies (Super Admin):</strong> If you are a super administrator, you will see an additional tab to manage all companies registered in the system.</li></ul>"
+      },
+      "faq": {
+        "title": "Frequently Asked Questions (FAQ)",
+        "q1": "What do I do if I forget my password?",
+        "a1": "Currently, password recovery is not yet automated. Please contact the system administrator in your company to request a new temporary password.",
+        "q2": "Can I use the system on my phone or tablet?",
+        "a2": "Yes! \\\"Business Hub Pro\\\" was designed to be responsive, meaning it adapts to different screen sizes. The experience may be slightly different, but all main features will be available.",
+        "q3": "How does the top search bar work?",
+        "a3": "The search bar at the top of the screen is a powerful tool. Start typing the name of a customer, supplier, or the title of an appointment, and the results will appear automatically. Clicking a result will take you directly to the corresponding page.",
+        "q4": "What does the notification bell show?",
+        "a4": "The bell icon shows a number representing how many appointments you have scheduled for the rest of today. Clicking it opens a quick list of these appointments."
+      }
+    }
   },
   "common": {
     "save": "Save",
+    "saving": "Saving...",
     "cancel": "Cancel",
     "saveChanges": "Save Changes",
     "add": "Add",
@@ -403,28 +671,84 @@
     "close": "Close",
     "ok": "OK",
     "actions": "Actions",
-    "today": "Today"
+    "today": "Today",
+    "unknownUser": "Unknown User",
+    "uploadedOn": "Uploaded on {{date}}",
+    "confirmDiscard": "You have unsaved changes. Are you sure you want to discard them?",
+    "time": {
+        "minute": "{{count}} minute",
+        "minutes": "{{count}} minutes",
+        "hour": "{{count}} hour",
+        "hours": "{{count}} hours",
+        "day": "{{count}} day",
+        "days": "{{count}} days"
+    }
   },
   "notifications": {
     "companyUpdated": "Company information updated successfully!",
     "userUpdated": "User updated successfully!",
     "userAdded": "User added successfully!",
+    "userAddedWithReset": "User added! They must use the 'Forgot Password' link to set their password.",
     "companyAdded": "Company added successfully!",
     "companyRemoved": "Company removed successfully!",
     "categoriesSaved": "Categories saved successfully!",
     "permissionsSaved": "Permissions saved successfully!",
+    "integrationsSaved": "Integration settings saved successfully!",
+    "planAdded": "Plan added successfully!",
+    "planUpdated": "Plan updated successfully!",
+    "planRemoved": "Plan removed successfully!",
+    "planDeleteBlocked": "The plan cannot be deleted. It is in use by the following companies: {{companies}}.",
     "customerUpdated": "Customer updated successfully!",
     "customerAdded": "Customer added successfully!",
     "customerRemoved": "Customer removed successfully!",
+    "customersAddedBatch": "{{count}} new customers were successfully registered.",
+    "customersSkippedBatch": "{{count}} contacts were skipped because they already exist as customers.",
+    "customerUpdateFailed": "Failed to update customer.",
+    "customerAddFailed": "Failed to add customer.",
+    "customerRemoveFailed": "Failed to remove customer.",
     "supplierUpdated": "Supplier updated successfully!",
     "supplierAdded": "Supplier added successfully!",
     "supplierRemoved": "Supplier removed successfully!",
     "appointmentUpdated": "Appointment updated successfully!",
     "appointmentAdded": "Appointment scheduled successfully!",
-    "notificationsSent": "Update notifications sent by email.",
+    "notificationsSent": "Update notifications sent via email.",
     "appointmentReopened": "Appointment reopened successfully!",
     "systemLogoUpdated": "System logo updated successfully!",
-    "systemLogoRemoved": "System logo removed."
+    "systemLogoRemoved": "System logo removed.",
+    "documentAdded": "Document \"{{name}}\" added successfully!",
+    "documentRemoved": "Document removed successfully!",
+    "companyDataFetched": "Company data autofilled successfully!",
+    "ui": {
+      "reminder": "Reminder: \"{{title}}\" starts in approx. {{time}}."
+    },
+    "email": {
+      "reminder": {
+        "subject": "Appointment Reminder: {{title}}",
+        "greeting": "Hello {{name}},",
+        "body": "This is a reminder for your upcoming appointment:",
+        "titleLabel": "Title",
+        "whenLabel": "When",
+        "whereLabel": "Location",
+        "descriptionLabel": "Description",
+        "preparation": "Please be prepared.",
+        "sincerely": "Sincerely,"
+      },
+      "update": {
+        "subjectNew": "New Appointment: {{title}}",
+        "subjectUpdate": "Appointment Updated: {{title}}",
+        "greeting": "Hello {{name}},",
+        "bodyNew": "You have been invited to a new appointment:",
+        "bodyUpdate": "An appointment you are a part of has been updated. Here are the latest details:"
+      },
+      "companyStatusUpdate": {
+        "subject": "Company Status Update: {{companyName}}",
+        "greeting": "Hello {{companyName}} team,",
+        "body": "Your company's account status has been updated:",
+        "oldStatus": "Previous Status",
+        "newStatus": "New Status",
+        "reason": "Reason"
+      }
+    }
   },
   "appointment": {
     "category": {
@@ -434,6 +758,10 @@
       "SALES": "Sales",
       "PERSONAL": "Personal",
       "OTHER": "Other"
+    },
+    "status": {
+      "agendado": "Scheduled",
+      "concluido": "Completed"
     }
   },
   "activityLog": {
@@ -452,7 +780,9 @@
     "NEW_APPOINTMENT_SERIES": "New appointment series \"{{title}}\" was scheduled.",
     "NEW_APPOINTMENT": "New appointment \"{{title}}\" was scheduled.",
     "UPDATE_APPOINTMENT": "{{description}}",
-    "NEW_INTERACTION": "New interaction of type \"{{type}}\" logged for \"{{name}}\"."
+    "NEW_INTERACTION": "New interaction of type \"{{type}}\" logged for \"{{name}}\".",
+    "NEW_DOCUMENT": "New document \"{{docName}}\" was added for customer \"{{customerName}}\".",
+    "DELETE_DOCUMENT": "Document \"{{docName}}\" was removed from customer \"{{customerName}}\"."
   },
   "icons": {
     "CustomerIcon": "Customer",
@@ -466,6 +796,126 @@
     "ReportsIcon": "Reports",
     "SettingsIcon": "Settings",
     "HelpIcon": "Help",
-    "CalendarCheckIcon": "Completed"
+    "CalendarCheckIcon": "Completed",
+    "KeyIcon": "Key"
+  },
+  "avatarSelection": {
+    "title": "Choose or Upload an Avatar"
+  },
+  "iconPicker": {
+    "title": "Select Icon"
+  },
+  "companyStatus": {
+    "active": "Active",
+    "trial": "Trial",
+    "suspended": "Suspended"
+  },
+  "accountStatus": {
+    "suspended": {
+      "title": "Account Suspended",
+      "body": "Your company's account has been suspended. Please contact support."
+    },
+    "trialExpired": {
+      "title": "Trial Period Expired",
+      "body": "Your trial period has ended. To continue using the service, please upgrade to a paid plan or contact your administrator."
+    },
+    "past_due": {
+      "title": "Payment Past Due",
+      "body": "Your subscription payment is past due. Please contact your administrator to regularize the situation and restore full access."
+    },
+    "logout": "Logout"
+  },
+  "whatsapp": {
+    "title": "WhatsApp (Cloud API)",
+    "step1": "Step 1: API Configuration",
+    "phoneIdLabel": "From Phone Number ID",
+    "tokenLabel": "Access Token",
+    "saveConfig": "Save Configuration",
+    "configSaved": "Configuration saved!",
+    "configNotSaved": "Configuration not saved.",
+    "configError": "API Configuration is not saved. Please save it first.",
+    "step2": "Step 2: Compose Message",
+    "templateLabel": "Select a Message Template",
+    "templatePlaceholder": "Choose a template...",
+    "parametersTitle": "Template Parameters",
+    "paramInfo": "The value for {{name}} will be automatically replaced with the contact's name.",
+    "step3": "Step 3: Add Contacts",
+    "step4": "Step 4: Configure & Send",
+    "logTitle": "Sending Log",
+    "logEmpty": "Logs will appear here once sending starts.",
+    "logSuccess": "SUCCESS: Message sent to {{name}} ({{phone}})",
+    "logError": "ERROR sending to {{name}} ({{phone}}): {{error}}",
+    "configMissing": {
+      "title": "API Configuration Required",
+      "message": "The WhatsApp API credentials are not set. Please go to Settings to add them before proceeding.",
+      "goToSettings": "Go to Settings"
+    },
+    "templates": {
+      "manageTitle": "Manage Message Templates",
+      "createButton": "Create New Template",
+      "modalTitleCreate": "Create New Message Template",
+      "modalTitleEdit": "Edit Message Template",
+      "defaultBadge": "Default",
+      "confirmDelete": "Are you sure you want to delete the template '{{name}}'?",
+      "deleteErrorDefault": "Default templates cannot be deleted.",
+      "form": {
+        "nameLabel": "Template Name (Friendly Name)",
+        "apiNameLabel": "API Name (e.g., hello_world)",
+        "apiNamePlaceholder": "lowercase_and_underscores_only",
+        "apiNameError": "API Name can only contain lowercase letters, numbers, and underscores.",
+        "bodyLabel": "Message Body",
+        "bodyHint": "Use {{1}} for the customer's name, and {{2}}, {{3}}, etc., for other parameters.",
+        "paramsLabel": "Detected Parameters"
+      },
+      "hello_world": {
+        "name": "Welcome Message",
+        "body": "Hello {{1}}, welcome to our service!"
+      },
+      "order_update": {
+        "name": "Order Status Update",
+        "body": "Hi {{1}}, your order #{{2}} has been shipped. The tracking code is {{3}}."
+      },
+      "appointment_reminder": {
+        "name": "Appointment Reminder",
+        "body": "Hello {{1}}, this is a reminder for your appointment tomorrow at {{2}}. See you soon!"
+      }
+    },
+    "contactSource": {
+      "file": "Import File",
+      "manual": "Manual Entry"
+    },
+    "file": {
+      "instructions": "Upload an Excel (.xlsx) or CSV (.csv) file. It must contain 'Name' and 'Phone' columns."
+    },
+    "manual": {
+      "nameLabel": "Name",
+      "phoneLabel": "Phone Number (with country code)",
+      "addButton": "Add"
+    },
+    "contactList": {
+      "title": "Contacts to Message",
+      "empty": "No contacts added yet.",
+      "nameHeader": "Name",
+      "phoneHeader": "Phone",
+      "sendHeader": "Send",
+      "saveHeader": "Save",
+      "selectAllSend": "Select All to Send",
+      "selectAllSave": "Select All to Save",
+      "searchPlaceholder": "Filter contacts...",
+      "summary": {
+        "total": "Total",
+        "toSend": "To Send",
+        "toSave": "To Save"
+      }
+    },
+    "rateLabel": "Messages per minute",
+    "startButton": "Start Sending ({{count}})",
+    "stopButton": "Stop Sending",
+    "saveButton": "Save Selected ({{count}})",
+    "sendingStatus": {
+      "sending": "Sending {{current}} of {{total}}...",
+      "finished": "Finished! Sent messages to {{count}} contacts.",
+      "stopped": "Sending stopped by user."
+    }
   }
 }

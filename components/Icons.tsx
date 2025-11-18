@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import type { User, Customer, Supplier } from '../types';
 
@@ -131,6 +129,14 @@ export const LogoutIcon: React.FC<IconProps> = (props) => (
     <Icon {...props} path={<path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />} />
 );
 
+export const KeyIcon: React.FC<IconProps> = (props) => (
+    <Icon {...props} path={<path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0-1.036.84-1.875 1.875-1.875s1.875.84 1.875 1.875S12.66 11.625 11.625 11.625s-1.875-.84-1.875-1.875zM10.5 13.5L9 15" />} />
+);
+
+export const LockIcon: React.FC<IconProps> = (props) => (
+    <Icon {...props} path={<path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 00-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />} />
+);
+
 export const PlusIcon: React.FC<IconProps> = (props) => (
   <Icon {...props} path={<path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />} />
 );
@@ -144,7 +150,7 @@ export const TrashIcon: React.FC<IconProps> = (props) => (
 );
 
 export const EyeIcon: React.FC<IconProps> = (props) => (
-  <Icon {...props} path={<path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.432 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />} />
+  <Icon {...props} path={<><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.432 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></>} />
 );
 
 export const SparklesIcon: React.FC<IconProps> = (props) => (
@@ -163,11 +169,11 @@ export const ClockIcon: React.FC<IconProps> = (props) => (
 );
 
 export const ClockRewindIcon: React.FC<IconProps> = (props) => (
-  <Icon {...props} path={<path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /><path  strokeLinecap="round" strokeLinejoin="round" d="M9 5.065A7.5 7.5 0 0 1 12 4.5a7.5 7.5 0 0 1 7.5 7.5" /><path strokeLinecap="round" strokeLinejoin="round" d="M9 5.065 7.5 6.5M9 5.065 10.5 6.5" /> } />
+  <Icon {...props} path={<><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /><path  strokeLinecap="round" strokeLinejoin="round" d="M9 5.065A7.5 7.5 0 0 1 12 4.5a7.5 7.5 0 0 1 7.5 7.5" /><path strokeLinecap="round" strokeLinejoin="round" d="M9 5.065 7.5 6.5M9 5.065 10.5 6.5" /></>} />
 );
 
 export const LocationPinIcon: React.FC<IconProps> = (props) => (
-    <Icon {...props} className='w-4 h-4' path={<path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />} />
+    <Icon {...props} className='w-4 h-4' path={<><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></>} />
 );
 
 export const BoardIcon: React.FC<IconProps> = (props) => (
@@ -187,7 +193,7 @@ export const BriefcaseIcon: React.FC<IconProps> = (props) => (
 );
 
 export const TagIcon: React.FC<IconProps> = (props) => (
-  <Icon {...props} path={<path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l6.472 6.471a2.25 2.25 0 003.182 0l4.318-4.318a2.25 2.25 0 000-3.182L11.16 3.66A2.25 2.25 0 009.568 3z" /><path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />} />
+  <Icon {...props} path={<><path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l6.472 6.471a2.25 2.25 0 003.182 0l4.318-4.318a2.25 2.25 0 000-3.182L11.16 3.66A2.25 2.25 0 009.568 3z" /><path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" /></>} />
 );
 
 export const HeartIcon: React.FC<IconProps> = (props) => (
@@ -212,6 +218,10 @@ export const PhoneIcon: React.FC<IconProps> = (props) => (
 
 export const EnvelopeIcon: React.FC<IconProps> = (props) => (
   <Icon {...props} path={<path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />} />
+);
+
+export const PaperClipIcon: React.FC<IconProps> = (props) => (
+  <Icon {...props} path={<path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.735l-7.662 7.662a4.5 4.5 0 01-6.364-6.364l7.662-7.662a3 3 0 014.242 4.242l-7.662 7.662a1.5 1.5 0 01-2.121-2.121l7.662-7.662" />} />
 );
 
 export const SunIcon: React.FC<IconProps> = (props) => (
@@ -256,6 +266,19 @@ export const ChevronDownIcon: React.FC<IconProps> = (props) => (
   <Icon {...props} path={<path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />} />
 );
 
+export const WhatsAppIcon: React.FC<IconProps> = (props) => (
+  <Icon {...props} path={<path strokeLinecap="round" strokeLinejoin="round" d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />} />
+);
+
+export const CheckCircleIcon: React.FC<IconProps> = (props) => (
+    <Icon {...props} strokeWidth={2} path={<path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />} />
+);
+
+export const InformationCircleIcon: React.FC<IconProps> = (props) => (
+    <Icon {...props} strokeWidth={2} path={<path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />} />
+);
+
+
 export const iconMap: { [key: string]: React.FC<IconProps> } = {
     CustomerIcon,
     UsersIcon,
@@ -269,4 +292,6 @@ export const iconMap: { [key: string]: React.FC<IconProps> } = {
     SettingsIcon,
     HelpIcon,
     CalendarCheckIcon,
+    WhatsAppIcon,
+    KeyIcon,
 };

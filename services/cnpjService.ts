@@ -1,9 +1,10 @@
 /**
- * @fileoverview Service for fetching Brazilian company information based on a CNPJ.
- * This service uses the public BrasilAPI.
+ * @fileoverview Service for fetching company information based on a national tax identifier.
+ * This service uses the public BrasilAPI (v1) for Brazil and mocks data for Argentina.
  */
 
-interface BrasilAPIResponse {
+// Interface adapted for v1 response
+interface BrasilAPIV1Response {
     cnpj: string;
     razao_social: string;
     nome_fantasia: string;
@@ -15,8 +16,7 @@ interface BrasilAPIResponse {
     uf: string;
     cep: string;
     ddd_telefone_1: string;
-    email: string | null;
-    // ... other fields exist but are not used
+    email: string | null; // email is present in v1
     erro?: any;
 }
 
@@ -29,29 +29,36 @@ export interface CompanyData {
 }
 
 /**
- * Fetches company information from the BrasilAPI.
+ * Fetches Brazilian company information from the BrasilAPI.
  * @param cnpj The 14-digit CNPJ string (only numbers).
  * @returns A promise that resolves to a CompanyData object or null if not found.
  */
-export const fetchCompanyData = async (cnpj: string): Promise<CompanyData | null> => {
+export const fetchBrazilianCompanyData = async (cnpj: string): Promise<CompanyData | null> => {
     const cleanedCnpj = cnpj.replace(/\D/g, '');
     if (cleanedCnpj.length !== 14) {
         return null;
     }
 
     try {
-        const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanedCnpj}`);
-        if (!response.ok) {
-            // BrasilAPI returns 404 for not found, which is a valid scenario.
-            if (response.status === 404) return null;
-            throw new Error('Network response was not ok');
+        const url = `https://brasilapi.com.br/api/cnpj/v1/${cleanedCnpj}`; // Reverted to v1 endpoint
+        const response = await fetch(url);
+        
+        if (response.status === 404) {
+            return null;
         }
-        const data: BrasilAPIResponse = await response.json();
-
-        if (data.erro) {
+        if (!response.ok) {
+            console.error(`BrasilAPI CNPJ fetch failed with status: ${response.status} ${response.statusText}`);
             return null;
         }
         
+        const data: BrasilAPIV1Response = await response.json();
+
+        // Check for application-level errors returned in the JSON body
+        if (data.erro) {
+            console.error('BrasilAPI returned an error in the response body:', data.erro);
+            return null;
+        }
+
         const addressParts = [
             data.logradouro,
             data.numero,
@@ -64,12 +71,37 @@ export const fetchCompanyData = async (cnpj: string): Promise<CompanyData | null
         return {
             name: data.razao_social || data.nome_fantasia || '',
             phone: data.ddd_telefone_1 || '',
-            email: data.email || '',
+            email: data.email || '', // Using email from v1 response
             cep: data.cep?.replace(/\D/g, '') || '',
             address: fullAddress,
         };
     } catch (error) {
         console.error('Failed to fetch company data from BrasilAPI:', error);
-        throw error;
+        // Do not re-throw the error to avoid breaking the UI flow. Autofill is a non-critical feature.
+        return null;
     }
+};
+
+/**
+ * Fetches Argentinian company information (mocked).
+ * @param cuit The 11-digit CUIT string (only numbers).
+ * @returns A promise that resolves to a mocked CompanyData object or null if not found.
+ */
+export const fetchArgentinianCompanyData = async (cuit: string): Promise<CompanyData | null> => {
+    const cleanedCuit = cuit.replace(/\D/g, '');
+    // Using a known CUIT for Mercado Libre as a mock
+    if (cleanedCuit !== '30709303122') {
+        return null;
+    }
+
+    console.log(`Simulating fetch for Argentinian CUIT: ${cleanedCuit}`);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    return {
+        name: 'Mercado Libre S.R.L.',
+        phone: '11 4640-8000',
+        email: 'ayuda@mercadolibre.com.ar',
+        cep: 'C1425BJH', // This is a CPA
+        address: 'Arias 3751, Piso 7, Buenos Aires'
+    };
 };

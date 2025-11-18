@@ -2,7 +2,7 @@
 {
   "app": {
     "title": {
-      "full": "Business Hub Pro",
+      "full": "Centro de Negocios Pro",
       "short": "Centro de Negocios"
     }
   },
@@ -12,6 +12,7 @@
     "suppliers": "Proveedores",
     "agenda": "Agenda",
     "reports": "Informes",
+    "whatsapp": "Envíos por WhatsApp",
     "settings": "Configuración",
     "help": "Ayuda"
   },
@@ -27,7 +28,10 @@
       "suppliers": "Proveedores",
       "appointments": "Citas",
       "noResults": "No se encontraron resultados."
-    }
+    },
+    "trialBanner": "Te quedan {{days}} días en tu período de prueba.",
+    "pastDueBanner": "Tu cuenta tiene un pago pendiente. Por favor, actualiza tu información de pago.",
+    "trialExpiredBanner": "Tu período de prueba ha expirado."
   },
   "login": {
     "welcome": "¡Bienvenido de nuevo! Accede a tu cuenta.",
@@ -37,12 +41,30 @@
     "passwordPlaceholder": "••••••",
     "rememberMe": "Recordarme",
     "forgotPassword": "¿Olvidaste tu contraseña?",
+    "firstTimeOrForgot": "¿Primera vez? / Olvidé mi contraseña",
     "signIn": "Iniciar Sesión",
     "signingIn": "Iniciando Sesión...",
     "continueWith": "O continuar con",
     "errors": {
-      "invalidCredentials": "Correo o contraseña no válidos. Cuentas de prueba: (Super Admin) ddarruspe@gmail.com / 1906 | (Usuario) alice@businesshub.com / password"
+      "invalidCredentials": "Correo o contraseña no válidos.",
+      "pendingAccount": "Tu cuenta está pendiente de configuración. Por favor, usa el enlace 'Olvidé mi contraseña' para establecer tu contraseña."
     }
+  },
+  "resetPassword": {
+    "title": "Establecer/Restablecer Contraseña",
+    "instructions": "Ingresa tu dirección de correo. Te enviaremos un enlace para restablecer tu contraseña.",
+    "continue": "Continuar",
+    "sendLink": "Enviar Enlace de Restablecimiento",
+    "emailNotFound": "No se encontró ninguna cuenta con ese correo.",
+    "setNewPasswordTitle": "Establece una Nueva Contraseña",
+    "password": "Nueva Contraseña",
+    "confirmPassword": "Confirmar Nueva Contraseña",
+    "passwordMismatch": "Las contraseñas no coinciden",
+    "passwordTooShort": "La contraseña debe tener al menos 6 caracteres.",
+    "savePassword": "Guardar Contraseña",
+    "success": "¡Contraseña actualizada con éxito! Ya puedes iniciar sesión.",
+    "successLinkSent": "Si existe una cuenta para este correo, se ha enviado un enlace para restablecer la contraseña.",
+    "backToLogin": "Volver al Inicio de Sesión"
   },
   "dashboard": {
     "title": "Panel",
@@ -59,14 +81,13 @@
       "title": "Próximas 5 Citas",
       "none": "No hay próximas citas."
     },
-    "calendar": {
-      "title": "Calendario Mensual",
-      "viewAppointmentsFor": "Ver citas para el {{date}}",
-      "weekdays": ["D", "L", "M", "M", "J", "V", "S"]
-    },
     "recentActivity": {
       "title": "Actividad Reciente",
       "summary": "Aquí se mostrará un resumen de la actividad reciente."
+    },
+    "calendar": {
+      "viewAppointmentsFor": "Ver citas para {{date}}",
+      "selectYear": "Seleccionar año"
     }
   },
   "customers": {
@@ -80,12 +101,25 @@
     "status": "Estado",
     "customerSince": "Cliente Desde",
     "actions": "Acciones",
+    "filters": {
+      "all": "Todos los Estados",
+      "status": "Estado",
+      "sort_by": "Ordenar por",
+      "sort_options": {
+        "date_newest": "Fecha (Más Reciente)",
+        "date_oldest": "Fecha (Más Antiguo)",
+        "name_asc": "Nombre (A-Z)",
+        "name_desc": "Nombre (Z-A)",
+        "status": "Estado"
+      }
+    },
     "noCustomersFound": "No se encontraron clientes.",
     "statusActive": "Activo",
     "statusInactive": "Inactivo",
     "typePerson": "Persona Física",
     "typeCompany": "Empresa",
     "details": "Detalles de {{name}}",
+    "fetchError": "Error al buscar clientes.",
     "confirmDelete": {
       "title": "Confirmar Eliminación",
       "header": "Eliminar Cliente",
@@ -110,12 +144,18 @@
       "cep": "Código Postal",
       "address": "Dirección",
       "status": "Estado",
+      "province": "Provincia",
       "companyLogo": "Logo de la Empresa",
       "uploadLogo": "Subir Logo",
       "logoHint": "Si no se sube un logo, se usarán las iniciales de la empresa.",
       "avatar": "Avatar",
       "changeAvatar": "Cambiar Avatar",
       "errors": {
+        "invalidDni": "DNI no válido. Por favor, revise el número ingresado.",
+        "invalidCuit": "CUIT no válido. Por favor, revise el número ingresado.",
+        "cepNotFound": "Código postal no encontrado.",
+        "cepError": "Error al buscar la dirección para el código postal.",
+        "invalidCpa": "CPA (código postal argentino) no válido.",
         "invalidCpf": "DNI no válido. Por favor, revise el número ingresado.",
         "invalidCnpj": "CUIT no válido. Por favor, revise el número ingresado."
       }
@@ -123,18 +163,23 @@
     "detailsView": {
       "tabs": {
         "details": "Detalles",
-        "interactions": "Interacciones"
+        "interactions": "Interacciones",
+        "documents": "Documentos"
       },
-      "nameLabel": "Nombre:",
-      "emailLabel": "Correo:",
-      "phoneLabel": "Teléfono:",
-      "typeLabel": "Tipo:",
-      "cnpjLabel": "CUIT:",
-      "cpfLabel": "DNI:",
-      "statusLabel": "Estado:",
-      "sinceLabel": "Cliente Desde:",
-      "cepLabel": "Código Postal:",
-      "addressLabel": "Dirección:",
+      "aiAnalysisTitle": "Análisis Estratégico con IA para {{name}}",
+      "aiAnalysisDescription": "Obtenga un resumen instantáneo del compromiso de este cliente, sus intereses clave y los próximos pasos sugeridos en función de todo su historial de interacciones y citas.",
+      "summaryCards": {
+        "totalAppointments": "Citas Totales",
+        "upcomingAppointments": "Próximas Citas",
+        "lastInteraction": "Última Interacción"
+      },
+      "appointments": {
+        "title": "Citas",
+        "upcoming": "Próximas Citas",
+        "past": "Pasadas",
+        "none": "No se encontraron citas.",
+        "viewInAgenda": "Ver en Agenda"
+      },
       "addInteraction": {
         "title": "Registrar Nueva Interacción",
         "placeholder": "Describe la interacción aquí...",
@@ -146,7 +191,16 @@
           "note": "Nota"
         }
       },
-      "noInteractions": "No hay interacciones registradas."
+      "noInteractions": "No hay interacciones registradas.",
+      "documents": {
+        "title": "Documentos del Cliente",
+        "upload": "Subir Documento",
+        "noDocuments": "No hay documentos subidos.",
+        "confirmDelete": {
+          "title": "Confirmar Eliminación de Documento",
+          "body": "¿Estás seguro de que quieres eliminar el documento <strong>{{name}}</strong>?"
+        }
+      }
     }
   },
   "suppliers": {
@@ -178,20 +232,36 @@
       "logoHint": "Si no se sube un logo, se usarán las iniciales.",
       "companyName": "Razón Social",
       "cnpj": "CUIT",
+      "cep": "Código Postal",
+      "address": "Dirección",
+      "province": "Provincia",
+      "contactInfo": "Información de Contacto",
       "contactPerson": "Persona de Contacto",
-      "contactAvatar": "Avatar del Contacto",
+      "contactAvatar": "Avatar de Contacto",
       "changeAvatar": "Cambiar Avatar",
       "fullName": "Nombre Completo",
       "email": "Correo Electrónico",
       "phone": "Teléfono",
-      "services": "Servicios (separados por coma)"
+      "services": "Servicios (separados por coma)",
+      "errors": {
+        "invalidCuit": "CUIT no válido. Por favor, revise el número ingresado.",
+        "cepNotFound": "Código postal no encontrado.",
+        "cepError": "Error al buscar la dirección para el código postal.",
+        "invalidCpa": "CPA (código postal argentino) no válido.",
+        "invalidCnpj": "CUIT no válido. Por favor, revise el número ingresado.",
+        "cnpjNotFound": "CUIT no encontrado.",
+        "cnpjError": "Error al buscar datos del CUIT."
+      }
     }
   },
   "agenda": {
     "title": "Agenda",
     "add": "Nueva Cita",
     "edit": "Editar Cita",
+    "viewCompleted": "Ver Completadas",
     "allAppointments": "Todas las Citas",
+    "more": "más",
+    "noAppointmentsInCategory": "No hay citas en esta categoría.",
     "views": {
       "board": "Tablero",
       "list": "Lista",
@@ -226,7 +296,17 @@
       "attachments": "Archivos Adjuntos:",
       "reopen": "Reabrir",
       "aiSummary": "Resumen IA",
-      "edit": "Editar"
+      "edit": "Editar",
+      "modifiedBy": "Modificado por",
+      "previousData": "Datos anteriores",
+      "subtasks": "Subtareas",
+      "subtaskProgress": "Progreso de Subtareas",
+      "deleteSubtask": "Eliminar subtarea",
+      "confirmDeleteSubtask": {
+        "title": "Eliminar Subtarea",
+        "body": "¿Estás seguro de que quieres eliminar la subtarea '<strong>{{name}}</strong>'? Esta acción no se puede deshacer."
+      },
+      "addSubtaskPlaceholder": "Añadir nueva subtarea..."
     },
     "form": {
       "generalInfo": "Información General",
@@ -267,6 +347,9 @@
       "attachments": "Archivos Adjuntos",
       "addFiles": "Añadir Archivos",
       "notify": "Notificar a los participantes por correo",
+      "noParticipants": "No hay participantes añadidos.",
+      "addParticipant": "Añadir Participante",
+      "noUsersFound": "No se encontraron usuarios.",
       "errors": {
         "general": "Por favor, complete el título y las fechas de inicio y fin.",
         "invalidDate": "La fecha/hora de inicio o fin no es válida.",
@@ -289,6 +372,8 @@
     "title": "Informes y Exportaciones",
     "exportPDF": "Exportar PDF",
     "exportExcel": "Exportar Excel",
+    "startDate": "Fecha de Inicio",
+    "endDate": "Fecha de Fin",
     "tabs": {
       "appointments": "Citas",
       "customers": "Clientes",
@@ -297,8 +382,7 @@
     },
     "appointments": {
       "title": "Informe de Citas",
-      "startDate": "Fecha de Inicio",
-      "endDate": "Fecha de Fin",
+      "fileName": "Informe_Citas",
       "table": {
         "title": "Título",
         "dateTime": "Fecha y Hora",
@@ -309,21 +393,32 @@
     },
     "customers": {
       "title": "Informe de Clientes",
+      "fileName": "Informe_Clientes",
       "statusChartTitle": "Estado de los Clientes",
       "listTitle": "Lista de Clientes",
       "table": {
         "name": "Nombre",
-        "status": "Estado"
+        "status": "Estado",
+        "email": "Correo",
+        "phone": "Teléfono",
+        "type": "Tipo"
       }
     },
     "suppliers": {
-      "title": "Informe de Proveedores por Categoría"
+      "title": "Informe de Proveedores por Categoría",
+      "fileName": "Informe_Proveedores",
+      "table": {
+        "category": "Categoría",
+        "supplier": "Proveedor",
+        "contact": "Contacto",
+        "email": "Correo",
+        "cnpj": "CUIT"
+      }
     },
     "activity": {
       "title": "Historial de Actividad",
-      "startDate": "Fecha de Inicio",
-      "endDate": "Fecha de Fin",
-      "activityType": "Tipo de Actividad",
+      "fileName": "Registro_de_Actividad",
+      "type": "Tipo de Actividad",
       "allTypes": "Todos los Tipos",
       "table": {
         "date": "Fecha",
@@ -339,28 +434,42 @@
       "users": "Usuarios",
       "categories": "Categorías",
       "companies": "Empresas",
+      "plans": "Planes",
       "permissions": "Permisos",
-      "systemCustomization": "Personalización"
+      "systemCustomization": "Personalización",
+      "integrations": "Integraciones"
     },
     "customization": {
       "title": "Personalización del Sistema",
       "logoTitle": "Logo del Sistema (Pantalla de Inicio)",
       "logoDescription": "Este logo aparecerá en la pantalla de inicio de sesión para todos los usuarios.",
       "changeLogo": "Cambiar Logo",
-      "removeLogo": "Quitar Logo"
+      "removeLogo": "Quitar Logo",
+      "noLogo": "Sin logo definido"
     },
     "company": {
       "title": "Información de la Empresa",
+      "editTitle": "Editar Información de la Empresa",
+      "editButton": "Editar",
+      "logo": "Logo de la Empresa",
       "name": "Nombre de la Empresa",
       "cnpj": "CUIT",
       "address": "Dirección",
       "contactEmail": "Correo de Contacto",
-      "phone": "Teléfono"
+      "phone": "Teléfono",
+      "changeLogo": "Cambiar Logo",
+      "errors": {
+        "invalidFormat": "Formato de archivo no válido. Utilice JPG, PNG o SVG.",
+        "fileTooLarge": "El archivo es demasiado grande. El límite es de {{limit}}MB.",
+        "uploadFailed": "Ocurrió un error al leer el archivo."
+      }
     },
     "users": {
       "title": "Gestión de Usuarios",
       "add": "Añadir Usuario",
       "edit": "Editar Usuario",
+      "addNew": "Añadir Nuevo Usuario",
+      "sendPasswordReset": "Enviar redefinición de contraseña",
       "table": {
         "name": "Nombre",
         "role": "Rol",
@@ -373,33 +482,93 @@
         "role": "Rol",
         "company": "Empresa",
         "selectCompany": "Seleccione una empresa",
+        "avatar": "Cambiar Avatar",
         "roles": {
           "admin": "Administrador",
           "manager": "Gerente",
           "collaborator": "Colaborador"
+        },
+        "errors": {
+          "selectCompany": "Por favor, seleccione una empresa para el nuevo usuario."
         }
       }
     },
     "companies": {
       "title": "Gestión de Empresas",
+      "searchPlaceholder": "Buscar por nombre o CUIT...",
       "add": "Añadir Empresa",
       "edit": "Editar Empresa",
+      "detailsTab": "Detalles",
+      "historyTab": "Historial",
+      "reasonForChange": "Motivo del Cambio (Obligatorio)",
+      "noHistory": "No se han registrado cambios de estado para esta empresa.",
+      "historyTable": {
+        "date": "Fecha",
+        "changedBy": "Cambiado Por",
+        "newStatus": "Cambio",
+        "reason": "Motivo"
+      },
+      "history": {
+        "changedStatus": "cambió el estado de <strong>{{old}}</strong> a <strong>{{new}}</strong>."
+      },
       "table": {
         "name": "Nombre de la Empresa",
         "cnpj": "CUIT",
-        "actions": "Acciones"
+        "actions": "Acciones",
+        "status": "Estado",
+        "trialEnds": "Fin de Prueba"
       },
+      "enableTrial": "Activar período de prueba",
+      "trialDuration": "Duración de la Prueba (días)",
+      "adminInfo": "Información del Administrador",
       "deleteWarning": "La empresa principal 'Business Hub Pro Inc.' no se puede eliminar por seguridad.",
-      "confirmDelete": "¿Estás seguro de que quieres eliminar la empresa \"{{name}}\"? Se eliminarán todos los datos asociados."
+      "confirmDeleteTitle": "Confirmar Eliminación de Empresa",
+      "confirmDelete": "¿Estás seguro de que quieres eliminar la empresa \"{{name}}\"? Todos los datos asociados (usuarios, clientes, etc.) se eliminarán permanentemente."
+    },
+     "plans": {
+      "title": "Gestión de Planes",
+      "add": "Añadir Plan",
+      "edit": "Editar Plan",
+      "addNew": "Añadir Nuevo Plan",
+      "currentPlan": "Plan Actual",
+      "perMonth": "/mes",
+      "userLimit": "{{count}} Usuarios",
+      "customerLimit": "{{count}} Clientes",
+      "noPlansTitle": "No hay planes creados todavía",
+      "noPlansDescription": "Empieza por crear tu primer plan de suscripción.",
+      "createFirstPlan": "Crear Primer Plan",
+      "form": {
+        "name": "Nombre del Plan",
+        "price": "Precio (mensual)",
+        "userLimit": "Límite de Usuarios",
+        "customerLimit": "Límite de Clientes",
+        "hasWhatsApp": "Habilitar Módulo WhatsApp",
+        "hasAI": "Habilitar Funciones de IA",
+        "allowBranding": "Permitir Personalización de Marca"
+      },
+       "features": {
+        "whatsApp": "Módulo WhatsApp",
+        "ai": "Funciones de IA",
+        "branding": "Personalización de Marca (Logo)"
+      },
+      "confirmDeleteTitle": "Confirmar Eliminación del Plan",
+      "confirmDeleteBody": "¿Estás seguro de que quieres eliminar el plan '{{name}}'?",
+      "deleteBlockedTitle": "Eliminación Bloqueada",
+      "deleteBlockedBody": "Este plan no se puede eliminar ya que está asignado a las siguientes empresas: {{companies}}."
     },
     "categories": {
       "title": "Categorías de Citas",
+      "save": "Guardar Cambios",
       "new": "Nueva Categoría",
       "deleteWarning": "Debe haber al menos una categoría.",
       "confirmDelete": "¿Estás seguro de que quieres eliminar la categoría \"{{name}}\"?.",
       "errors": {
         "emptyName": "El nombre de la categoría no puede estar vacío.",
         "duplicateName": "El nombre de la categoría \"{{name}}\" está duplicado."
+      },
+      "tooltips": {
+        "cannotEditName": "Los nombres de las categorías predeterminadas no se pueden cambiar, ya que se utilizan para las traducciones del sistema.",
+        "cannotDelete": "Las categorías predeterminadas no se pueden eliminar."
       }
     },
     "permissions": {
@@ -407,6 +576,7 @@
       "selectUser": "Seleccione un Usuario",
       "editingFor": "Editando permisos para: {{name}}",
       "selectUserPrompt": "Seleccione un usuario para ver y editar sus permisos.",
+      "save": "Guardar Permisos",
       "groups": {
         "dashboard": "Panel",
         "customers": "Clientes",
@@ -431,17 +601,57 @@
         "MANAGE_COMPANY_INFO": "Editar información de la propia empresa",
         "MANAGE_USERS": "Gestionar usuarios de la propia empresa",
         "MANAGE_CATEGORIES": "Gestionar categorías de citas",
-        "MANAGE_ALL_USERS": "Gestionar usuarios de CUALQUIER empresa"
+        "MANAGE_ALL_USERS": "Gestionar usuarios de CUALQUIER empresa",
+        "MANAGE_PLANS": "Gestionar planes de suscripción"
       }
     }
   },
   "help": {
     "title": "Centro de Ayuda",
     "intro": "¡Bienvenido! Aquí encontrarás guías sobre cómo usar las funcionalidades del Centro de Negocios.",
-    "downloadManual": "Descargar Manual en PDF"
+    "downloadManual": "Descargar Manual en PDF",
+    "manualFilename": "Manual_BusinessHubPro.pdf",
+    "sections": {
+      "dashboard": {
+        "title": "Panel Principal",
+        "content": "<p>El Panel es tu pantalla de inicio, diseñada para ofrecer una vista general y rápida de la información más importante de tu negocio.</p><h4>Componentes Principales:</h4><ul><li><strong>Tarjetas de Estadísticas:</strong> En la parte superior, ves números clave como el total de clientes activos, proveedores y tus próximas citas. Estas tarjetas sirven como un termómetro diario de tu operación.</li><li><strong>Gráfico de Nuevos Clientes:</strong> Este gráfico muestra el crecimiento de tu base de clientes en los últimos meses, permitiendo identificar tendencias de adquisición.</li><li><strong>Lista de Próximas Citas:</strong> Un resumen rápido de tus próximos eventos programados para el día, asegurando que nunca te pierdas un compromiso importante.</li></ul>"
+      },
+      "customers": {
+        "title": "Gestión de Clientes",
+        "content": "<h4>Viendo la Lista de Clientes</h4><p>En esta pantalla, verás una tabla con todos tus clientes. Usa la barra de búsqueda en la parte superior para encontrar un cliente específico por nombre.</p><h4>Añadiendo un Nuevo Cliente</h4><ol><li>Haz clic en el botón azul <strong>\\\"+ Añadir Cliente\\\"</strong> en la esquina superior derecha.</li><li>Completa el formulario. El sistema valida automáticamente el DNI/CUIT para garantizar la integridad de los datos.</li><li>Para clientes persona física, puedes elegir un avatar predefinido o subir una foto.</li><li>Después de completar, haz clic en \\\"Añadir Cliente\\\" para guardar.</li></ol><h4>Viendo Detalles e Interacciones</h4><ul><li>Haz clic en cualquier cliente de la lista para abrir una ventana con sus detalles completos.</li><li>Navega a la pestaña \\\"Interacciones\\\" para ver todo el historial de contactos, como llamadas, correos y reuniones.</li><li>Puedes registrar una nueva interacción directamente en esta pestaña.</li></ul><h4>Análisis con IA</h4><p>En la pestaña de interacciones, si hay un historial de contactos, puedes usar el botón <strong>\\\"Analizar con IA\\\"</strong>. La inteligencia artificial leerá las interacciones y generará un resumen estratégico, identificando el sentimiento del cliente, oportunidades de negocio y sugiriendo próximos pasos.</p>"
+      },
+      "suppliers": {
+        "title": "Gestión de Proveedores",
+        "content": "<p>La gestión de proveedores se centraliza en esta pantalla, funcionando de manera muy similar a la de clientes. Puedes registrar socios, información de contacto y los servicios que prestan.</p><ul><li>Usa el botón <strong>\\\"+ Añadir Proveedor\\\"</strong> para registrar un nuevo socio.</li><li>Completa los datos de la empresa así como la información de la persona de contacto principal.</li><li>Es posible ver, editar o eliminar un proveedor usando los iconos en la lista.</li></ul>"
+      },
+      "agenda": {
+        "title": "Usando la Agenda",
+        "content": "<h4>Visualizaciones de la Agenda</h4><p>La agenda ofrece múltiples formas de ver tus citas. Usa los botones en la esquina superior derecha para alternar entre las visualizaciones:</p><ul><li><strong>Tablero (Kanban):</strong> Ideal para la planificación semanal. Organiza citas en columnas como \\\"Hoy\\\", \\\"Mañana\\\", y \\\"Próximos 7 Días\\\". Arrastra y suelta tarjetas para reprogramar citas de forma intuitiva.</li><li><strong>Lista:</strong> Una vista cronológica de todas tus citas futuras.</li><li><strong>Mes, Semana, Día:</strong> Vistas de calendario clásicas para planificación a corto y largo plazo.</li></ul><h4>Creando y Gestionando Citas</h4><ol><li>Haz clic en el botón <strong>\\\"+ Nueva Cita\\\"</strong>.</li><li>Completa los detalles como título, descripción, fecha/hora de inicio y fin.</li><li>Asocia citas a clientes o proveedores para mantener un historial integrado.</li><li>Adjunta archivos importantes y configura recurrencias para eventos regulares (diario, semanal, etc.).</li><li>Marca una cita como completada directamente en el tablero o en la lista.</li><li><strong>Añade subtareas</strong> para detallar actividades. Márcalas como completadas y sigue el progreso a través de indicadores visuales en el tablero y una barra de progreso en la vista de detalles.</li></ol><h4>Historial y Resumen con IA</h4><p>Accede al \\\"Historial\\\" para ver todas las citas ya completadas. Para cualquier cita en el historial, haz clic en <strong>\\\"Resumen IA\\\"</strong>. El sistema generará un resumen profesional de la reunión, ideal para actas y seguimientos.</p>"
+      },
+      "reports": {
+        "title": "Informes y Exportaciones",
+        "content": "<p>Esta sección te permite visualizar datos consolidados y exportarlos para usar en otras herramientas o para presentaciones.</p><ul><li><strong>Navega por las Pestañas:</strong> Elige entre informes de Citas, Clientes, Proveedores o Historial de Actividad.</li><li><strong>Filtra los Datos:</strong> En cada informe, puedes usar filtros, como rangos de fechas, para centrarte en los datos que más importan.</li><li><strong>Exporta en PDF o Excel:</strong> Para cada informe, encontrarás botones para \\\"Exportar PDF\\\" (ideal para imprimir y compartir) y \\\"Exportar Excel\\\" (ideal si necesitas manipular los datos en hojas de cálculo).</li></ul>"
+      },
+      "settings": {
+        "title": "Configuración",
+        "content": "<p>Personaliza el sistema para satisfacer las necesidades de tu equipo y empresa.</p><ul><li><strong>Mi Empresa:</strong> Actualiza los datos de registro de tu empresa, como dirección, teléfono y CUIT.</li><li><strong>Usuarios:</strong> Añade nuevos miembros de tu equipo al sistema, edita su información y establece sus permisos (Administrador, Gerente, Colaborador).</li><li><strong>Categorías:</strong> Personaliza las categorías de citas. Puedes renombrar, cambiar iconos y colores para que se adapten mejor a tu organización.</li><li><strong>Empresas (Super Admin):</strong> Si eres un superadministrador, verás una pestaña adicional para gestionar todas las empresas registradas en el sistema.</li></ul>"
+      },
+      "faq": {
+        "title": "Preguntas Frecuentes (FAQ)",
+        "q1": "¿Qué hago si olvido mi contraseña?",
+        "a1": "Actualmente, la recuperación de contraseña aún no está automatizada. Por favor, contacta al administrador del sistema en tu empresa para solicitar una nueva contraseña temporal.",
+        "q2": "¿Puedo usar el sistema en mi teléfono o tableta?",
+        "a2": "¡Sí! \\\"Business Hub Pro\\\" fue diseñado para ser responsivo, lo que significa que se adapta a diferentes tamaños de pantalla. La experiencia puede ser ligeramente diferente, pero todas las características principales estarán disponibles.",
+        "q3": "¿Cómo funciona la búsqueda en la barra superior?",
+        "a3": "La barra de búsqueda en la parte superior de la pantalla es una herramienta poderosa. Comienza a escribir el nombre de un cliente, proveedor o el título de una cita, y los resultados aparecerán automáticamente. Hacer clic en un resultado te llevará directamente a la página correspondiente.",
+        "q4": "¿Qué muestra la campana de notificaciones?",
+        "a4": "El ícono de la campana muestra un número que representa cuántas citas tienes programadas para el resto del día de hoy. Al hacer clic, se abre una lista rápida de estas citas."
+      }
+    }
   },
   "common": {
     "save": "Guardar",
+    "saving": "Guardando...",
     "cancel": "Cancelar",
     "saveChanges": "Guardar Cambios",
     "add": "Añadir",
@@ -450,12 +660,24 @@
     "close": "Cerrar",
     "ok": "Aceptar",
     "actions": "Acciones",
-    "today": "Hoy"
+    "today": "Hoy",
+    "unknownUser": "Usuario Desconhecido",
+    "uploadedOn": "Subido el {{date}}",
+    "confirmDiscard": "Tienes cambios sin guardar. ¿Estás seguro de que quieres descartarlos?",
+    "time": {
+      "minute": "{{count}} minuto",
+      "minutes": "{{count}} minutos",
+      "hour": "{{count}} hora",
+      "hours": "{{count}} horas",
+      "day": "{{count}} día",
+      "days": "{{count}} días"
+    }
   },
   "notifications": {
     "companyUpdated": "¡Información de la empresa actualizada con éxito!",
     "userUpdated": "¡Usuario actualizado con éxito!",
     "userAdded": "¡Usuario añadido con éxito!",
+    "userAddedWithReset": "¡Usuario añadido! Debe usar el enlace 'Olvidé mi contraseña' para establecer su contraseña.",
     "companyAdded": "¡Empresa añadida con éxito!",
     "companyRemoved": "¡Empresa eliminada con éxito!",
     "categoriesSaved": "¡Categorías guardadas con éxito!",
@@ -463,15 +685,52 @@
     "customerUpdated": "¡Cliente actualizado con éxito!",
     "customerAdded": "¡Cliente añadido con éxito!",
     "customerRemoved": "¡Cliente eliminado con éxito!",
+    "customerUpdateFailed": "Error al actualizar el cliente.",
+    "customerAddFailed": "Error al añadir el cliente.",
+    "customerRemoveFailed": "Error al eliminar el cliente.",
     "supplierUpdated": "¡Proveedor actualizado con éxito!",
     "supplierAdded": "¡Proveedor añadido con éxito!",
     "supplierRemoved": "¡Proveedor eliminado con éxito!",
     "appointmentUpdated": "¡Cita actualizada con éxito!",
     "appointmentAdded": "¡Cita programada con éxito!",
-    "notificationsSent": "Notificaciones de actualización enviadas por correo.",
+    "notificationsSent": "Notificaciones de actualización enviadas por correo electrónico.",
     "appointmentReopened": "¡Cita reabierta con éxito!",
     "systemLogoUpdated": "¡Logo del sistema actualizado con éxito!",
-    "systemLogoRemoved": "Logo del sistema eliminado."
+    "systemLogoRemoved": "Logo del sistema eliminado.",
+    "documentAdded": "¡Documento \"{{name}}\" añadido con éxito!",
+    "documentRemoved": "¡Documento eliminado con éxito!",
+    "companyDataFetched": "¡Datos de la empresa completados automáticamente!",
+    "ui": {
+      "reminder": "Recordatorio: \"{{title}}\" comienza en aprox. {{time}}."
+    },
+    "email": {
+      "reminder": {
+        "subject": "Recordatorio de Cita: {{title}}",
+        "greeting": "Hola {{name}},",
+        "body": "Este es un recordatorio para tu próxima cita:",
+        "titleLabel": "Título",
+        "whenLabel": "Cuándo",
+        "whereLabel": "Ubicación",
+        "descriptionLabel": "Descripción",
+        "preparation": "Por favor, prepárate.",
+        "sincerely": "Atentamente,"
+      },
+      "update": {
+        "subjectNew": "Nueva Cita: {{title}}",
+        "subjectUpdate": "Cita Actualizada: {{title}}",
+        "greeting": "Hola {{name}},",
+        "bodyNew": "Has sido invitado a una nueva cita:",
+        "bodyUpdate": "Una cita de la que eres parte ha sido actualizada. Aquí están los últimos detalles:"
+      },
+      "companyStatusUpdate": {
+        "subject": "Actualización de Estado de la Empresa: {{companyName}}",
+        "greeting": "Hola equipo de {{companyName}},",
+        "body": "El estado de la cuenta de su empresa ha sido actualizado:",
+        "oldStatus": "Estado Anterior",
+        "newStatus": "Nuevo Estado",
+        "reason": "Motivo"
+      }
+    }
   },
   "appointment": {
     "category": {
@@ -481,6 +740,10 @@
       "SALES": "Ventas",
       "PERSONAL": "Personal",
       "OTHER": "Otro"
+    },
+    "status": {
+      "agendado": "Programado",
+      "concluido": "Completado"
     }
   },
   "activityLog": {
@@ -489,17 +752,19 @@
     "DELETE_COMPANY": "La empresa \"{{name}}\" y todos sus datos fueron eliminados.",
     "NEW_USER": "Nuevo usuario \"{{name}}\" fue añadido.",
     "UPDATE_USER": "{{description}}",
-    "UPDATE_USER_PERMISSIONS": "Se actualizaron los permisos del usuario {{name}}.",
+    "UPDATE_USER_PERMISSIONS": "Se actualizaron los permisos para el usuario {{name}}.",
     "NEW_CUSTOMER": "Nuevo cliente \"{{name}}\" fue añadido.",
     "UPDATE_CUSTOMER": "Cliente \"{{name}}\" fue actualizado.",
     "DELETE_CUSTOMER": "Cliente \"{{name}}\" fue eliminado.",
     "NEW_SUPPLIER": "Nuevo proveedor \"{{name}}\" fue añadido.",
     "UPDATE_SUPPLIER": "Proveedor \"{{name}}\" fue actualizado.",
     "DELETE_SUPPLIER": "Proveedor \"{{name}}\" fue eliminado.",
-    "NEW_APPOINTMENT_SERIES": "Se programó una nueva serie de citas \"{{title}}\".",
-    "NEW_APPOINTMENT": "Se programó una nueva cita \"{{title}}\".",
+    "NEW_APPOINTMENT_SERIES": "Nueva serie de citas \"{{title}}\" fue programada.",
+    "NEW_APPOINTMENT": "Nueva cita \"{{title}}\" fue programada.",
     "UPDATE_APPOINTMENT": "{{description}}",
-    "NEW_INTERACTION": "Se registró una nueva interacción de tipo \"{{type}}\" para \"{{name}}\"."
+    "NEW_INTERACTION": "Nueva interacción de tipo \"{{type}}\" registrada para \"{{name}}\".",
+    "NEW_DOCUMENT": "Nuevo documento \"{{docName}}\" fue añadido para el cliente \"{{customerName}}\".",
+    "DELETE_DOCUMENT": "El documento \"{{docName}}\" fue eliminado del cliente \"{{customerName}}\"."
   },
   "icons": {
     "CustomerIcon": "Cliente",
@@ -514,5 +779,124 @@
     "SettingsIcon": "Configuración",
     "HelpIcon": "Ayuda",
     "CalendarCheckIcon": "Completado"
+  },
+  "avatarSelection": {
+    "title": "Elige o Sube un Avatar"
+  },
+  "iconPicker": {
+    "title": "Seleccionar Ícono"
+  },
+  "companyStatus": {
+    "active": "Activo",
+    "trial": "En Prueba",
+    "suspended": "Suspendido"
+  },
+  "accountStatus": {
+    "suspended": {
+      "title": "Cuenta Suspendida",
+      "body": "La cuenta de su empresa ha sido suspendida. Por favor, contacte con el soporte."
+    },
+    "trialExpired": {
+      "title": "Período de Prueba Expirado",
+      "body": "Su período de prueba ha terminado. Para continuar usando el servicio, por favor actualice a un plan de pago o contacte a su administrador."
+    },
+    "past_due": {
+      "title": "Pago Vencido",
+      "body": "El pago de su suscripción está vencido. Por favor, contacte a su administrador para regularizar la situación y restaurar el acceso completo."
+    },
+    "logout": "Cerrar Sesión"
+  },
+  "whatsapp": {
+    "title": "WhatsApp (API Cloud)",
+    "step1": "Paso 1: Configuración de la API",
+    "phoneIdLabel": "ID del Número de Teléfono (Origen)",
+    "tokenLabel": "Token de Acceso",
+    "saveConfig": "Guardar Configuración",
+    "configSaved": "¡Configuración guardada!",
+    "configNotSaved": "Configuración no guardada.",
+    "configError": "La configuración de la API no está guardada. Por favor, guárdela primero.",
+    "step2": "Paso 2: Redactar Mensaje",
+    "templateLabel": "Seleccionar una Plantilla de Mensaje",
+    "templatePlaceholder": "Elija una plantilla...",
+    "parametersTitle": "Parámetros de la Plantilla",
+    "paramInfo": "El valor para {{1}} será reemplazado automáticamente por el nombre del contacto.",
+    "step3": "Paso 3: Añadir Contactos",
+    "step4": "Paso 4: Configurar y Enviar",
+    "logTitle": "Registro de Envío",
+    "logEmpty": "Los registros aparecerán aquí una vez que comience el envío.",
+    "logSuccess": "ÉXITO: Mensaje enviado a {{name}} ({{phone}})",
+    "logError": "ERROR al enviar a {{name}} ({{phone}}): {{error}}",
+    "configMissing": {
+      "title": "Configuración de API Requerida",
+      "message": "Las credenciales de la API de WhatsApp no están configuradas. Por favor, vaya a Configuración para añadirlas antes de proceder.",
+      "goToSettings": "Ir a Configuración"
+    },
+    "templates": {
+      "manageTitle": "Gestionar Plantillas de Mensajes",
+      "createButton": "Crear Nueva Plantilla",
+      "modalTitleCreate": "Crear Nueva Plantilla de Mensaje",
+      "modalTitleEdit": "Editar Plantilla de Mensaje",
+      "defaultBadge": "Predeterminada",
+      "confirmDelete": "¿Estás seguro de que quieres eliminar la plantilla '{{name}}'?",
+      "deleteErrorDefault": "Las plantillas predeterminadas no se pueden eliminar.",
+      "form": {
+        "nameLabel": "Nombre de la Plantilla (Amigable)",
+        "apiNameLabel": "Nombre en la API (ej: hello_world)",
+        "apiNamePlaceholder": "solo_minusculas_y_guiones_bajos",
+        "apiNameError": "El Nombre en la API solo puede contener letras minúsculas, números y guiones bajos.",
+        "bodyLabel": "Cuerpo del Mensaje",
+        "bodyHint": "Usa {{1}} para el nombre del cliente, y {{2}}, {{3}}, etc., para otros parámetros.",
+        "paramsLabel": "Parámetros Detectados"
+      },
+      "hello_world": {
+        "name": "Mensaje de Bienvenida",
+        "body": "¡Hola {{1}}, bienvenido a nuestro servicio!"
+      },
+      "order_update": {
+        "name": "Actualización de Pedido",
+        "body": "Hola {{1}}, tu pedido nº{{2}} ha sido enviado. El código de seguimiento es {{3}}."
+      },
+      "appointment_reminder": {
+        "name": "Recordatorio de Cita",
+        "body": "Hola {{1}}, este es un recordatorio para tu cita mañana a las {{2}}. ¡Nos vemos pronto!"
+      }
+    },
+    "contactSource": {
+      "file": "Importar Archivo",
+      "manual": "Entrada Manual"
+    },
+    "file": {
+      "instructions": "Sube un archivo Excel (.xlsx) o CSV (.csv). Debe contener las columnas 'Nombre' y 'Teléfono'."
+    },
+    "manual": {
+      "nameLabel": "Nombre",
+      "phoneLabel": "Número de Teléfono (con código de país)",
+      "addButton": "Añadir"
+    },
+    "contactList": {
+      "title": "Contactos para Envío",
+      "empty": "Aún no se han añadido contactos.",
+      "nameHeader": "Nombre",
+      "phoneHeader": "Teléfono",
+      "sendHeader": "Enviar",
+      "saveHeader": "Guardar",
+      "selectAllSend": "Seleccionar Todos para Enviar",
+      "selectAllSave": "Seleccionar Todos para Guardar",
+      "searchPlaceholder": "Filtrar contactos...",
+      "summary": {
+        "total": "Total",
+        "toSend": "Para Enviar",
+        "toSave": "Para Guardar"
+      }
+    },
+    "rateLabel": "Mensajes por minuto",
+    "startButton": "Iniciar Envíos ({{count}})",
+    "stopButton": "Detener Envíos",
+    "saveButton": "Guardar Seleccionados ({{count}})",
+    "sendingStatus": {
+      "sending": "Enviando {{current}} de {{total}}...",
+      "finished": "¡Finalizado! Mensajes enviados a {{count}} contactos.",
+      "stopped": "Envío detenido por el usuario."
+    }
   }
 }

@@ -1,368 +1,268 @@
-
-
-import React, { useState, useEffect, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useState, useMemo } from 'react';
 import { Supplier } from '../types';
 import { useAppState } from '../state/AppContext';
+import { useLocalization } from '../contexts/LocalizationContext';
+import { EditIcon, TrashIcon, EyeIcon, SearchIcon, WarningIcon, PlusIcon, UserProfile } from './Icons';
 import { Modal } from './Modal';
-import { PlusIcon, EditIcon, TrashIcon, EyeIcon, UserProfile, SearchIcon, WarningIcon, AlertTriangleIcon } from './Icons';
-import Breadcrumbs from './Breadcrumbs';
 import { AvatarSelectionModal } from './AvatarSelectionModal';
-import { validateCNPJ } from '../services/validationService';
-import { fetchAddress } from '../services/cepService';
-import { fetchCompanyData } from '../services/cnpjService';
+import Breadcrumbs from './Breadcrumbs';
 import FloatingActionButton from './FloatingActionButton';
+import { validateCNPJ, validateCUIT, validateCPA } from '../services/validationService';
+import { fetchBrazilianCompanyData, fetchArgentinianCompanyData } from '../services/cnpjService';
+import { fetchBrazilianAddress, fetchArgentinianAddress } from '../services/cepService';
+import { maskCNPJ, maskCUIT } from '../services/maskService';
 
+// --- Supplier Form ---
 interface SupplierFormProps {
     supplier?: Supplier | null;
-    onSave: (supplier: Omit<Supplier, 'id' | 'companyId'> | Supplier) => void;
+    onSave: (supplierData: Omit<Supplier, 'id' | 'companyId'>) => void;
     onCancel: () => void;
 }
 
-const formatCNPJ = (value: string): string => {
-    return value
-        .replace(/\D/g, '')
-        .slice(0, 14)
-        .replace(/(\d{2})(\d)/, '$1.$2')
-        .replace(/(\d{3})(\d)/, '$1.$2')
-        .replace(/(\d{3})(\d)/, '$1/$2')
-        .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
-};
-
-const formatCEP = (value: string): string => {
-    return value
-        .replace(/\D/g, '')
-        .slice(0, 8)
-        .replace(/(\d{5})(\d)/, '$1-$2');
-};
-
 const SupplierForm: React.FC<SupplierFormProps> = ({ supplier, onSave, onCancel }) => {
-    const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
-    const [error, setError] = useState('');
-    const [isFetchingAddress, setIsFetchingAddress] = useState(false);
-    const [isFetchingCNPJ, setIsFetchingCNPJ] = useState(false);
+    const { t, locale } = useLocalization();
+    const { dispatch } = useAppState();
+    const isArgentina = locale.startsWith('es');
     const [formData, setFormData] = useState({
-        name: '',
-        cnpj: '',
-        contactPerson: '',
-        phone: '',
-        email: '',
-        services: '',
-        logoUrl: '',
-        contactAvatarUrl: '',
-        cep: '',
-        address: '',
+        name: supplier?.name || '',
+        cnpj: supplier?.cnpj || '',
+        contactPerson: supplier?.contactPerson || '',
+        phone: supplier?.phone || '',
+        email: supplier?.email || '',
+        services: supplier?.services.join(', ') || '',
+        logoUrl: supplier?.logoUrl || '',
+        contactAvatarUrl: supplier?.contactAvatarUrl || '',
+        cep: supplier?.cep || '',
+        address: supplier?.address || '',
     });
+    const [errors, setErrors] = useState<{ cnpj?: string, cep?: string }>({});
+    const [isLogoModalOpen, setIsLogoModalOpen] = useState(false);
+    const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
 
-    useEffect(() => {
-        if (supplier) {
-            setFormData({
-                name: supplier.name,
-                cnpj: supplier.cnpj,
-                contactPerson: supplier.contactPerson,
-                phone: supplier.phone,
-                email: supplier.email,
-                services: supplier.services.join(', '),
-                logoUrl: supplier.logoUrl || '',
-                contactAvatarUrl: supplier.contactAvatarUrl || '',
-                cep: supplier.cep,
-                address: supplier.address,
-            });
-        } else {
-             setFormData({
-                name: '',
-                cnpj: '',
-                contactPerson: '',
-                phone: '',
-                email: '',
-                services: '',
-                logoUrl: '',
-                contactAvatarUrl: '',
-                cep: '',
-                address: '',
-            });
-        }
-    }, [supplier]);
+    const handleIdentifierChange = (value: string) => {
+        const cleanedValue = value.replace(/\D/g, '');
+        const maskedValue = isArgentina ? maskCUIT(cleanedValue) : maskCNPJ(cleanedValue);
+        setFormData(prev => ({ ...prev, cnpj: maskedValue }));
+        if (errors.cnpj) setErrors(prev => ({ ...prev, cnpj: undefined }));
+    };
 
-    // Effect to fetch company data from CNPJ
-    useEffect(() => {
-        const cleanedCnpj = formData.cnpj.replace(/\D/g, '');
-        if (cleanedCnpj.length === 14) {
-            const fetchCompanyInfo = async () => {
-                setIsFetchingCNPJ(true);
-                setError('');
-                try {
-                    const companyData = await fetchCompanyData(cleanedCnpj);
-                    if (companyData) {
-                        setFormData(prev => ({
-                            ...prev,
-                            name: companyData.name,
-                            phone: companyData.phone,
-                            email: companyData.email,
-                            cep: formatCEP(companyData.cep),
-                            address: companyData.address,
-                        }));
+    const handleIdentifierBlur = async () => {
+        const cleanedIdentifier = formData.cnpj.replace(/\D/g, '');
+        setErrors(prev => ({ ...prev, cnpj: undefined }));
+        if (!cleanedIdentifier) return;
+
+        let companyData = null;
+        dispatch({ type: 'SHOW_LOADING' });
+        try {
+            if (isArgentina) {
+                if (cleanedIdentifier.length === 11) {
+                    if (validateCUIT(cleanedIdentifier)) {
+                        companyData = await fetchArgentinianCompanyData(cleanedIdentifier);
+                        if (!companyData) {
+                            setErrors(prev => ({...prev, cnpj: t('suppliers.form.errors.cnpjNotFound')}));
+                        }
                     } else {
-                        setError('CNPJ não encontrado em nossa base de dados.');
+                        setErrors(prev => ({...prev, cnpj: t('suppliers.form.errors.invalidCuit')}));
                     }
-                } catch (err) {
-                    console.error("Failed to fetch CNPJ data", err);
-                    setError('Falha ao buscar dados do CNPJ. Tente novamente.');
-                } finally {
-                    setIsFetchingCNPJ(false);
+                } else {
+                     setErrors(prev => ({...prev, cnpj: t('suppliers.form.errors.invalidCuit')}));
                 }
-            };
-            fetchCompanyInfo();
+            } else { // Brazil
+                if (cleanedIdentifier.length === 14) {
+                     if (validateCNPJ(cleanedIdentifier)) {
+                        companyData = await fetchBrazilianCompanyData(cleanedIdentifier);
+                        if (!companyData) {
+                            setErrors(prev => ({...prev, cnpj: t('suppliers.form.errors.cnpjNotFound')}));
+                        }
+                    } else {
+                        setErrors(prev => ({...prev, cnpj: t('suppliers.form.errors.invalidCnpj')}));
+                    }
+                } else {
+                    setErrors(prev => ({...prev, cnpj: t('suppliers.form.errors.invalidCnpj')}));
+                }
+            }
+
+            if (companyData) {
+                setFormData(prev => ({
+                    ...prev,
+                    name: companyData.name || prev.name,
+                    phone: companyData.phone || prev.phone,
+                    email: companyData.email || prev.email,
+                    cep: companyData.cep || prev.cep,
+                    address: companyData.address || prev.address,
+                }));
+                dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'notifications.companyDataFetched', type: 'success' } });
+            }
+        } finally {
+            dispatch({ type: 'HIDE_LOADING' });
         }
-    }, [formData.cnpj]);
+    };
     
-    // Effect to fetch address from CEP
-    useEffect(() => {
-        const cleanedCep = formData.cep.replace(/\D/g, '');
-        if (cleanedCep.length === 8) {
-            const fetchAddressData = async () => {
-                setIsFetchingAddress(true);
-                setError('');
-                try {
-                    const addressData = await fetchAddress(cleanedCep);
-                    if (addressData) {
-                        const fullAddress = `${addressData.logradouro}, ${addressData.bairro} - ${addressData.localidade}/${addressData.uf}`;
-                        setFormData(prev => ({ ...prev, address: fullAddress }));
-                    } else {
-                         setError('CEP não encontrado. Por favor, verifique o número.');
-                    }
-                } catch (error) {
-                    console.error("Failed to fetch address", error);
-                    setError('Falha ao buscar o CEP. Tente novamente.');
-                } finally {
-                    setIsFetchingAddress(false);
+    const handlePostalCodeBlur = async () => {
+        if (!formData.cep) return;
+        setErrors(prev => ({ ...prev, cep: undefined }));
+        dispatch({ type: 'SHOW_LOADING' });
+        try {
+            if (isArgentina) {
+                if (!validateCPA(formData.cep)) {
+                    setErrors(prev => ({ ...prev, cep: t('suppliers.form.errors.invalidCpa') }));
+                    return;
                 }
-            };
-            fetchAddressData();
-        }
-    }, [formData.cep]);
-
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        if (name === 'cnpj') {
-            setFormData(prev => ({ ...prev, cnpj: formatCNPJ(value) }));
-        } else if (name === 'cep') {
-            setFormData(prev => ({ ...prev, cep: formatCEP(value) }));
-        } else {
-            setFormData(prev => ({ ...prev, [name]: value }));
-        }
-    };
-
-    const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setFormData(prev => ({...prev, logoUrl: reader.result as string}));
-            };
-            reader.readAsDataURL(file);
+                const addressData = await fetchArgentinianAddress(formData.cep);
+                if (addressData) {
+                    setFormData(prev => ({ ...prev, address: `${addressData.logradouro}, ${addressData.bairro}, ${addressData.localidade}` }));
+                } else {
+                    setErrors(prev => ({ ...prev, cep: t('suppliers.form.errors.cepNotFound') }));
+                }
+            } else {
+                const cleanedPostalCode = formData.cep.replace(/\D/g, '');
+                if (cleanedPostalCode.length === 8) {
+                    const addressData = await fetchBrazilianAddress(cleanedPostalCode);
+                    if (addressData) {
+                        setFormData(prev => ({ ...prev, address: `${addressData.logradouro}, ${addressData.bairro}, ${addressData.localidade} - ${addressData.uf}` }));
+                    } else {
+                        setErrors(prev => ({ ...prev, cep: t('suppliers.form.errors.cepNotFound') }));
+                    }
+                }
+            }
+        } finally {
+            dispatch({ type: 'HIDE_LOADING' });
         }
     };
 
-    const handleAvatarSelect = (avatarUrl: string) => {
-        setFormData(prev => ({ ...prev, contactAvatarUrl: avatarUrl }));
-        setIsAvatarModalOpen(false);
-    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
+        const cleanedIdentifier = formData.cnpj.replace(/\D/g, '');
+        
+        const isValid = isArgentina ? validateCUIT(cleanedIdentifier) : validateCNPJ(cleanedIdentifier);
 
-        if (!validateCNPJ(formData.cnpj)) {
-            setError('CNPJ inválido. Por favor, verifique o número digitado.');
+        if (!isValid) {
+            setErrors({ cnpj: t(isArgentina ? 'suppliers.form.errors.invalidCuit' : 'suppliers.form.errors.invalidCnpj') });
             return;
         }
-
-        const finalData = {
-            ...formData,
-            services: formData.services.split(',').map(s => s.trim()).filter(Boolean)
-        };
-        onSave(supplier ? { ...supplier, ...finalData } : finalData);
+        setErrors({});
+        onSave({ ...formData, services: formData.services.split(',').map(s => s.trim()).filter(Boolean) });
     };
+
+    const identifierLabel = useMemo(() => {
+        return t('suppliers.form.cnpj');
+    }, [t]);
+
+    const postalCodeLabel = useMemo(() => t('suppliers.form.cep'), [t]);
 
     return (
-      <>
         <form onSubmit={handleSubmit} className="space-y-6">
-            {error && <div className="p-3 my-2 text-sm text-red-700 bg-red-100 border border-red-400 rounded-md dark:bg-red-900/20 dark:text-red-300 dark:border-red-600" role="alert">{error}</div>}
-            <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                <h3 className="text-lg font-semibold text-secondary dark:text-gray-200 mb-4">Dados da Empresa</h3>
-                <div className="space-y-4">
-                    <div className="flex items-start gap-4">
-                        <UserProfile user={{name: formData.name, avatarUrl: formData.logoUrl}} className="w-20 h-20 flex-shrink-0" />
-                        <div className="flex-grow">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Logo da Empresa</label>
-                            <div className="mt-2">
-                                <label htmlFor="logo-upload" className="cursor-pointer bg-white dark:bg-gray-700 py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
-                                    Carregar Logo
-                                </label>
-                                <input id="logo-upload" name="logo-upload" type="file" className="sr-only" onChange={handleLogoChange} accept="image/*" />
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Se nenhum logo for enviado, as iniciais serão usadas.</p>
-                            </div>
-                        </div>
+            <fieldset className="space-y-4 p-4 border dark:border-gray-700 rounded-lg">
+                <legend className="text-lg font-semibold text-secondary dark:text-gray-200 px-2 -mx-2">{t('suppliers.form.companyData')}</legend>
+                 <div className="flex items-center gap-4">
+                    <UserProfile user={{ name: formData.name, avatarUrl: formData.logoUrl }} className="w-16 h-16 rounded-md" />
+                    <button type="button" onClick={() => setIsLogoModalOpen(true)} className="text-sm font-semibold text-primary hover:underline">{t('suppliers.form.uploadLogo')}</button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium">{t('suppliers.form.companyName')}</label>
+                        <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600" />
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Razão Social</label>
-                            <input type="text" name="name" id="name" value={formData.name} onChange={handleChange} required className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary" />
-                        </div>
-                        <div>
-                            <label htmlFor="cnpj" className="block text-sm font-medium text-gray-700 dark:text-gray-300">CNPJ</label>
-                             <div className="relative">
-                                <input type="text" name="cnpj" id="cnpj" value={formData.cnpj} onChange={handleChange} required maxLength={18} className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary" />
-                                {isFetchingCNPJ && (
-                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                    <div>
+                        <label className="block text-sm font-medium">{identifierLabel}</label>
+                        <input type="text" value={formData.cnpj} onChange={e => handleIdentifierChange(e.target.value)} onBlur={handleIdentifierBlur} required className={`mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600 ${errors.cnpj ? 'border-red-500' : ''}`} />
+                        {errors.cnpj && <p className="text-red-500 text-xs mt-1">{errors.cnpj}</p>}
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="md:col-span-1">
-                            <label htmlFor="cep" className="block text-sm font-medium text-gray-700 dark:text-gray-300">CEP</label>
-                            <div className="relative">
-                                <input type="text" name="cep" id="cep" value={formData.cep} onChange={handleChange} placeholder="XXXXX-XXX" className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary" />
-                                {isFetchingAddress && (
-                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <div className="md:col-span-2">
-                            <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Endereço</label>
-                             <input type="text" name="address" id="address" value={formData.address} onChange={handleChange} className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary" />
-                        </div>
+                    <div>
+                        <label className="block text-sm font-medium">{postalCodeLabel}</label>
+                        <input type="text" value={formData.cep} onChange={e => setFormData({ ...formData, cep: e.target.value })} onBlur={handlePostalCodeBlur} className={`mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600 ${errors.cep ? 'border-red-500' : ''}`} />
+                         {errors.cep && <p className="text-red-500 text-xs mt-1">{errors.cep}</p>}
+                    </div>
+                    <div className="md:col-span-2">
+                        <label className="block text-sm font-medium">{t('suppliers.form.address')}</label>
+                        <input type="text" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600" />
                     </div>
                 </div>
-            </div>
+            </fieldset>
 
-            <div className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-                 <h3 className="text-lg font-semibold text-secondary dark:text-gray-200 mb-4">Pessoa de Contato</h3>
-                 <div className="space-y-4">
-                     <div className="flex items-start gap-4">
-                         <UserProfile user={{name: formData.contactPerson, avatarUrl: formData.contactAvatarUrl}} className="w-20 h-20 flex-shrink-0" />
-                         <div className="flex-grow space-y-3">
-                             <div>
-                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Avatar do Contato</label>
-                                 <div className="mt-2 flex items-center gap-2 flex-wrap">
-                                     <button type="button" onClick={() => setIsAvatarModalOpen(true)} className="bg-white dark:bg-gray-700 py-2 px-3 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm leading-4 font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600">
-                                         Alterar Avatar
-                                     </button>
-                                 </div>
-                             </div>
-                         </div>
-                     </div>
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                           <label htmlFor="contactPerson" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome Completo</label>
-                           <input type="text" name="contactPerson" id="contactPerson" value={formData.contactPerson} onChange={handleChange} required className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary" />
-                       </div>
-                         <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-                            <input type="email" name="email" id="email" value={formData.email} onChange={handleChange} required className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary" />
-                        </div>
+            <fieldset className="space-y-4 p-4 border dark:border-gray-700 rounded-lg">
+                <legend className="text-lg font-semibold text-secondary dark:text-gray-200 px-2 -mx-2">{t('suppliers.form.contactInfo')}</legend>
+                <div className="flex items-center gap-4">
+                    <UserProfile user={{ name: formData.contactPerson, avatarUrl: formData.contactAvatarUrl }} className="w-16 h-16" />
+                    <button type="button" onClick={() => setIsAvatarModalOpen(true)} className="text-sm font-semibold text-primary hover:underline">{t('suppliers.form.changeAvatar')}</button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium">{t('suppliers.form.contactPerson')}</label>
+                        <input type="text" value={formData.contactPerson} onChange={e => setFormData({ ...formData, contactPerson: e.target.value })} required className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600" />
                     </div>
-                     <div className="grid grid-cols-1">
-                         <div>
-                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Telefone</label>
-                            <input type="tel" name="phone" id="phone" value={formData.phone} onChange={handleChange} required className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary" />
-                        </div>
+                     <div>
+                        <label className="block text-sm font-medium">{t('suppliers.form.email')}</label>
+                        <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} required className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600" />
                     </div>
-                 </div>
-            </div>
-
-            <div>
-                <label htmlFor="services" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Serviços (separados por vírgula)</label>
-                <textarea name="services" id="services" value={formData.services} onChange={handleChange} rows={3} className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-800 dark:text-gray-200 focus:ring-primary focus:border-primary"></textarea>
-            </div>
-
+                    <div>
+                        <label className="block text-sm font-medium">{t('suppliers.form.phone')}</label>
+                        <input type="tel" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600" />
+                    </div>
+                    <div className="md:col-span-2">
+                        <label className="block text-sm font-medium">{t('suppliers.form.services')}</label>
+                        <input type="text" value={formData.services} onChange={e => setFormData({ ...formData, services: e.target.value })} className="mt-1 w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600" />
+                    </div>
+                </div>
+            </fieldset>
+            
             <div className="flex justify-end gap-4 pt-4">
-                <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 transition-colors">Cancelar</button>
-                <button type="submit" className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover transition-colors">{supplier ? 'Salvar Alterações' : 'Adicionar Fornecedor'}</button>
+                <button type="button" onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600">{t('common.cancel')}</button>
+                <button type="submit" className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-hover">{supplier ? t('common.saveChanges') : t('suppliers.add')}</button>
             </div>
+            <AvatarSelectionModal isOpen={isLogoModalOpen} onClose={() => setIsLogoModalOpen(false)} onSelectAvatar={url => setFormData({ ...formData, logoUrl: url })} />
+            <AvatarSelectionModal isOpen={isAvatarModalOpen} onClose={() => setIsAvatarModalOpen(false)} onSelectAvatar={url => setFormData({ ...formData, contactAvatarUrl: url })} />
         </form>
-         <AvatarSelectionModal
-            isOpen={isAvatarModalOpen}
-            onClose={() => setIsAvatarModalOpen(false)}
-            onSelectAvatar={handleAvatarSelect}
-        />
-      </>
     );
-}
+};
 
+// --- Main Component ---
 const SupplierManagement: React.FC = () => {
+    // FIX: Destructure properties from `state` correctly. `currentUser` is nested inside the `state` object.
     const { state, dispatch, hasPermission } = useAppState();
-    const { suppliers, appointments } = state;
+    const { suppliers, currentUser } = state;
+    const { t } = useLocalization();
 
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
-    const [viewingSupplier, setViewingSupplier] = useState<Supplier | null>(null);
     const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
-    const [deletionError, setDeletionError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const location = useLocation();
 
-    const handleOpenModal = (supplier: Supplier | null = null) => {
-        setEditingSupplier(supplier);
-        setIsModalOpen(true);
-    };
-
-    useEffect(() => {
-        const params = new URLSearchParams(location.search);
-        const searchQuery = params.get('search');
-        if (searchQuery) {
-            setSearchTerm(searchQuery);
-        }
-    }, [location.search]);
+    const companySuppliers = useMemo(() => {
+        if (!currentUser) return [];
+        return hasPermission('MANAGE_ALL_COMPANIES') ? suppliers : suppliers.filter(s => s.companyId === currentUser.companyId);
+    }, [suppliers, currentUser, hasPermission]);
 
     const filteredSuppliers = useMemo(() => {
-        const userSuppliers = state.currentUser?.email === 'ddarruspe@gmail.com'
-            ? suppliers
-            : suppliers.filter(s => s.companyId === state.currentUser?.companyId);
-
-        if (!searchTerm) {
-            return userSuppliers;
-        }
-        const lowercasedTerm = searchTerm.toLowerCase();
-        return userSuppliers.filter(supplier =>
-            supplier.name.toLowerCase().includes(lowercasedTerm) ||
-            supplier.contactPerson.toLowerCase().includes(lowercasedTerm)
+        return companySuppliers.filter(s =>
+            s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            s.contactPerson.toLowerCase().includes(searchTerm.toLowerCase())
         );
-    }, [suppliers, searchTerm, state.currentUser]);
+    }, [companySuppliers, searchTerm]);
 
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
-        setEditingSupplier(null);
-    };
-
-    const handleSaveSupplier = (supplierData: Omit<Supplier, 'id' | 'companyId'> | Supplier) => {
-        if ('id' in supplierData) {
-            dispatch({ type: 'UPDATE_SUPPLIER', payload: supplierData });
+    const handleSaveSupplier = (supplierData: Omit<Supplier, 'id' | 'companyId'>) => {
+        if (editingSupplier) {
+            const updatedSupplier = { ...editingSupplier, ...supplierData };
+            dispatch({ type: 'UPDATE_SUPPLIER', payload: updatedSupplier });
+            dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'notifications.supplierUpdated', type: 'success' } });
         } else {
-            dispatch({ type: 'ADD_SUPPLIER', payload: supplierData });
+            const newSupplier: Supplier = {
+                id: `sup-${Date.now()}`,
+                companyId: currentUser!.companyId,
+                ...supplierData
+            };
+            dispatch({ type: 'ADD_SUPPLIER', payload: newSupplier });
+            dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'notifications.supplierAdded', type: 'success' } });
         }
-        dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: `Fornecedor ${'id' in supplierData ? 'atualizado' : 'adicionado'} com sucesso!`, type: 'success' } });
-        handleCloseModal();
+        setIsFormOpen(false);
     };
 
-    const handleDeleteSupplier = (supplierId: string) => {
-        dispatch({ type: 'DELETE_SUPPLIER', payload: supplierId });
-        dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'Fornecedor removido com sucesso!', type: 'success' } });
-    };
-
-    const handleAttemptDelete = (supplier: Supplier) => {
-        const relatedAppointments = appointments.filter(app => app.supplierId === supplier.id);
-        if (relatedAppointments.length > 0) {
-            setDeletionError(`Este fornecedor não pode ser excluído. Ele está associado a ${relatedAppointments.length} compromisso(s). Remova a associação antes de excluí-lo.`);
-        } else {
-            setSupplierToDelete(supplier);
+    const handleDeleteSupplier = () => {
+        if (supplierToDelete) {
+            dispatch({ type: 'DELETE_SUPPLIER', payload: supplierToDelete.id });
+            dispatch({ type: 'SHOW_NOTIFICATION', payload: { messageKey: 'notifications.supplierRemoved', type: 'success' } });
+            setSupplierToDelete(null);
         }
     };
 
@@ -370,181 +270,69 @@ const SupplierManagement: React.FC = () => {
         <div className="p-4 sm:p-8 dark:bg-secondary">
             <Breadcrumbs />
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
-                <h1 className="text-3xl font-bold text-secondary dark:text-gray-100">Fornecedores</h1>
-            </div>
-            <div className="mb-6">
+                <h1 className="text-3xl font-bold text-secondary dark:text-gray-100">{t('suppliers.title')}</h1>
                 <div className="relative">
-                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                        type="text"
-                        placeholder="Buscar por nome da empresa ou contato..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:outline-none dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200"
-                    />
+                    <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder={t('suppliers.searchPlaceholder')} className="pl-10 pr-4 py-2 w-full sm:w-64 border rounded-lg dark:bg-gray-800 dark:border-gray-600 focus:ring-primary focus:border-primary" />
                 </div>
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead className="bg-gray-50 dark:bg-gray-700">
-                        <tr>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Razão Social</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Contato</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Serviços</th>
-                            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                        {filteredSuppliers.length > 0 ? (
-                            filteredSuppliers.map((supplier) => (
+
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50 dark:bg-gray-700">
+                            <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('suppliers.companyName')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('suppliers.contact')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('suppliers.services')}</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">{t('common.actions')}</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            {filteredSuppliers.map(supplier => (
                                 <tr key={supplier.id}>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">
-                                            <UserProfile user={{...supplier, avatarUrl: supplier.logoUrl}} className="w-10 h-10 mr-4" />
-                                            <div>
-                                                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{supplier.name}</div>
-                                                <div className="text-sm text-gray-500 dark:text-gray-400">{supplier.cnpj}</div>
-                                            </div>
+                                            <UserProfile user={{ name: supplier.name, avatarUrl: supplier.logoUrl }} className="w-10 h-10 rounded-md" />
+                                            <div className="ml-4 font-medium text-gray-900 dark:text-gray-100">{supplier.name}</div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="text-sm text-gray-900 dark:text-gray-100">{supplier.contactPerson}</div>
                                         <div className="text-sm text-gray-500 dark:text-gray-400">{supplier.email}</div>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
                                         {supplier.services.join(', ')}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <div className="flex items-center gap-4">
-                                            <button onClick={() => setViewingSupplier(supplier)} className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300" title="Visualizar Detalhes">
-                                                <EyeIcon />
-                                            </button>
-                                            {hasPermission('MANAGE_SUPPLIERS') && (
-                                                <button onClick={() => handleOpenModal(supplier)} className="text-primary hover:text-primary-hover" title="Editar">
-                                                    <EditIcon />
-                                                </button>
-                                            )}
-                                            {hasPermission('DELETE_SUPPLIERS') && (
-                                                <button onClick={() => handleAttemptDelete(supplier)} className="text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400" title="Deletar">
-                                                    <TrashIcon />
-                                                </button>
-                                            )}
+                                        <div className="flex items-center gap-2">
+                                            {hasPermission('MANAGE_SUPPLIERS') && <button onClick={() => { setEditingSupplier(supplier); setIsFormOpen(true); }} title={t('common.edit')} className="text-gray-400 hover:text-primary"><EditIcon className="w-5 h-5" /></button>}
+                                            {hasPermission('DELETE_SUPPLIERS') && <button onClick={() => setSupplierToDelete(supplier)} title={t('common.delete')} className="text-gray-400 hover:text-red-500"><TrashIcon className="w-5 h-5" /></button>}
                                         </div>
                                     </td>
                                 </tr>
-                            ))
-                        ) : (
-                             <tr>
-                                <td colSpan={4} className="text-center py-10 text-gray-500 dark:text-gray-400">
-                                    Nenhum fornecedor encontrado.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            {hasPermission('MANAGE_SUPPLIERS') && (
-                <FloatingActionButton
-                    label="Adicionar Fornecedor"
-                    icon={PlusIcon}
-                    onClick={() => handleOpenModal()}
-                />
-            )}
+            {hasPermission('MANAGE_SUPPLIERS') && <FloatingActionButton label={t('suppliers.add')} icon={PlusIcon} onClick={() => { setEditingSupplier(null); setIsFormOpen(true); }} />}
 
-            <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={editingSupplier ? 'Editar Fornecedor' : 'Adicionar Novo Fornecedor'}>
-                <SupplierForm
-                    supplier={editingSupplier}
-                    onSave={handleSaveSupplier}
-                    onCancel={handleCloseModal}
-                />
+            <Modal isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} title={editingSupplier ? t('suppliers.edit') : t('suppliers.addNew')}>
+                <SupplierForm supplier={editingSupplier} onSave={handleSaveSupplier} onCancel={() => setIsFormOpen(false)} />
             </Modal>
-
-            {viewingSupplier && (
-                <Modal isOpen={!!viewingSupplier} onClose={() => setViewingSupplier(null)} title={`Detalhes de ${viewingSupplier.name}`}>
-                    <div className="space-y-6 text-sm">
-                        <div className="p-4 border dark:border-gray-700 rounded-lg">
-                            <h3 className="text-base font-semibold text-secondary dark:text-gray-200 mb-3">Informações da Empresa</h3>
-                            <div className="flex items-center gap-4 mb-4">
-                                <UserProfile user={{name: viewingSupplier.name, avatarUrl: viewingSupplier.logoUrl}} className="w-16 h-16 flex-shrink-0" />
-                                <div>
-                                    <div><strong className="font-semibold text-gray-700 dark:text-gray-300">Razão Social:</strong> <span className="text-gray-600 dark:text-gray-400">{viewingSupplier.name}</span></div>
-                                    <div><strong className="font-semibold text-gray-700 dark:text-gray-300">CNPJ:</strong> <span className="text-gray-600 dark:text-gray-400">{viewingSupplier.cnpj}</span></div>
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-4 border-t dark:border-gray-600">
-                                <div><strong className="font-semibold text-gray-700 dark:text-gray-300">CEP:</strong> <span className="text-gray-600 dark:text-gray-400">{viewingSupplier.cep}</span></div>
-                                <div className="col-span-2"><strong className="font-semibold text-gray-700 dark:text-gray-300">Endereço:</strong> <span className="text-gray-600 dark:text-gray-400">{viewingSupplier.address}</span></div>
-                            </div>
-                        </div>
-
-                         <div className="p-4 border dark:border-gray-700 rounded-lg">
-                             <h3 className="text-base font-semibold text-secondary dark:text-gray-200 mb-3">Informações de Contato</h3>
-                            <div className="flex items-center gap-4">
-                                <UserProfile user={{name: viewingSupplier.contactPerson, avatarUrl: viewingSupplier.contactAvatarUrl}} className="w-16 h-16 flex-shrink-0" />
-                               <div>
-                                    <div><strong className="font-semibold text-gray-700 dark:text-gray-300">Pessoa de Contato:</strong> <span className="text-gray-600 dark:text-gray-400">{viewingSupplier.contactPerson}</span></div>
-                                    <div><strong className="font-semibold text-gray-700 dark:text-gray-300">Email:</strong> <span className="text-gray-600 dark:text-gray-400">{viewingSupplier.email}</span></div>
-                                    <div><strong className="font-semibold text-gray-700 dark:text-gray-300">Telefone:</strong> <span className="text-gray-600 dark:text-gray-400">{viewingSupplier.phone}</span></div>
-                               </div>
-                            </div>
-                        </div>
-
-                        <div><strong className="font-semibold text-gray-700 dark:text-gray-300">Serviços:</strong> <span className="text-gray-600 dark:text-gray-400">{viewingSupplier.services.join(', ')}</span></div>
+            
+            <Modal isOpen={!!supplierToDelete} onClose={() => setSupplierToDelete(null)} title={t('suppliers.confirmDelete.header')}>
+                <div className="text-center p-4">
+                    <WarningIcon className="w-16 h-16 text-red-500 mx-auto mb-4" />
+                    <p className="text-gray-600 dark:text-gray-300" dangerouslySetInnerHTML={{ __html: t('suppliers.confirmDelete.body', { name: supplierToDelete?.name }) }} />
+                    <div className="flex justify-center gap-4 pt-6 mt-4">
+                        <button onClick={() => setSupplierToDelete(null)} className="px-6 py-2 bg-white border dark:bg-gray-700 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600">{t('common.cancel')}</button>
+                        <button onClick={handleDeleteSupplier} className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">{t('common.delete')}</button>
                     </div>
-                </Modal>
-            )}
-
-            {supplierToDelete && (
-                <Modal isOpen={!!supplierToDelete} onClose={() => setSupplierToDelete(null)} title="Confirmar Exclusão">
-                    <div>
-                        <div className="text-center p-4">
-                            <WarningIcon className="w-16 h-16 text-red-500 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-secondary dark:text-gray-100 mb-2">Excluir Fornecedor</h3>
-                            <p className="text-gray-600 dark:text-gray-300">
-                                Você tem certeza que deseja excluir <strong>{supplierToDelete.name}</strong>? Esta ação é permanente e não pode ser desfeita.
-                            </p>
-                        </div>
-                        <div className="flex justify-center gap-4 pt-4 mt-4 border-t dark:border-gray-700">
-                            <button
-                                type="button"
-                                onClick={() => setSupplierToDelete(null)}
-                                className="px-6 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    handleDeleteSupplier(supplierToDelete.id);
-                                    setSupplierToDelete(null);
-                                }}
-                                className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-                            >
-                                Excluir
-                            </button>
-                        </div>
-                    </div>
-                </Modal>
-            )}
-
-            {deletionError && (
-                <Modal isOpen={!!deletionError} onClose={() => setDeletionError(null)} title="Exclusão Bloqueada">
-                    <div className="text-center p-4">
-                        <AlertTriangleIcon className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-                        <p className="text-gray-600 dark:text-gray-300">{deletionError}</p>
-                        <div className="mt-6">
-                            <button
-                                type="button"
-                                onClick={() => setDeletionError(null)}
-                                className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary-hover transition-colors"
-                            >
-                                OK
-                            </button>
-                        </div>
-                    </div>
-                </Modal>
-            )}
+                </div>
+            </Modal>
         </div>
     );
 };
